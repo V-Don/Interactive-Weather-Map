@@ -246,6 +246,10 @@
                 loginContainer.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 userEmailSpan.textContent = user.email;
+
+                // --- THIS IS THE FIX ---
+                // Tell the map to re-evaluate its size now that it's visible.
+                setTimeout(() => map.invalidateSize(), 100); 
                 
                 // For now, we still load from localStorage. We will change this next.
                 loadMarkersFromLocalStorage();
