@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storm Inspector Map</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <style>
+        html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; }
+        .leaflet-popup-content-wrapper { border-radius: 8px; background-color: #f9fafb; }
+        .leaflet-popup-content { margin: 15px; font-family: 'Inter', sans-serif; }
+        .popup-button-remove {
+            padding: 6px 12px; border-radius: 6px; border: none; color: white;
+            font-size: 14px; cursor: pointer; margin-top: 10px; transition: background-color 0.2s;
+            background-color: #ef4444; /* Red */
+        }
+        .popup-button-remove:hover { background-color: #dc2626; }
+        .leaflet-top, .leaflet-bottom { z-index: 1000; }
+        #storm-date-panel-container, #address-list-panel-container { transition: transform 0.3s ease-in-out; }
+        #storm-date-panel-container.closed { transform: translateX(-100%); }
+        #address-list-panel-container.closed { transform: translateX(100%); }
+        
+        /* Custom styles for the zoom slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            background: #e5e7eb;
+            height: 0.5rem;
+            border-radius: 0.25rem;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            margin-top: -4px;
+            background-color: #3b82f6;
+            height: 1.25rem;
+            width: 1.25rem;
+            border-radius: 9999px;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-['Inter']">
+
+    <div id="map"></div>
+
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl flex flex-col items-center gap-2">
+        <div class="w-full flex items-center gap-2">
+            <div class="relative flex-grow">
+                <input type="text" id="address-input" placeholder="Enter an address..." class="w-full px-4 py-3 text-lg rounded-full shadow-lg border-2 border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                <div id="address-suggestions" class="absolute mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden hidden"></div>
+            </div>
+            <div class="relative group">
+                <button id="upload-btn" class="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                </button>
+                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">
+                    Upload addresses from a file (.csv, .xlsx, .txt) or paste a list.
+                </div>
+            </div>
+        </div>
+        <button id="toggle-address-list-btn" class="px-4 py-1 bg-white text-gray-700 text-sm font-semibold rounded-full shadow-md hover:bg-gray-100 transition hidden">Manage Addresses</button>
+    </div>
+
+    <div id="top-right-controls" class="absolute top-20 sm:top-4 right-4 z-[1000] flex flex-col items-end gap-2">
+        <button id="remove-all-btn" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Markers</button>
+    </div>
+
+    <div id="storm-date-panel-container" class="absolute top-1/4 left-0 z-[1000] closed">
+        <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg max-h-96 overflow-y-auto">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">Storm Dates</h3>
+            <div id="storm-date-list" class="space-y-2"></div>
+        </div>
+        <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center">
+            <span>📅</span>
+            <span>Storm Dates</span>
+        </button>
+    </div>
+    
+    <div id="address-list-panel-container" class="absolute top-0 right-0 h-full z-[1000] closed">
+        <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full w-64 sm:w-80 flex flex-col">
+            <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
+            <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0">
+                <h4 class="font-semibold text-sm mb-2">Filter by Status</h4>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label>
+                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label>
+                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label>
+                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label>
+                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label>
+                </div>
+            </div>
+            <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
+            <button id="remove-selected-btn" class="w-full mt-2 px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition flex-shrink-0">Remove Selected</button>
+        </div>
+    </div>
+
+    <div id="legend-panel" class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden">
+        <h4 class="font-bold text-gray-800 mb-2">Selected Storms</h4>
+        <div id="legend-content" class="space-y-1"></div>
+    </div>
+    
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-11/12 max-w-xs bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2">
+        <input type="range" id="cluster-slider" min="20" max="150" value="80" step="1" class="flex-grow">
+        <div class="relative group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+            <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                Adjust marker clustering sensitivity.
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+            <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
+            <p class="text-gray-600 mb-6">This will remove all markers from the map.</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button>
+                <button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
+            <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label>
+                    <input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt">
+                </div>
+                <div class="text-center text-gray-500">OR</div>
+                <div>
+                    <label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label>
+                    <textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
+                <button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Map Initialization ---
+        const map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 3,
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // --- Global Variables & State ---
+        let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
+        map.addLayer(markers);
+        let swathLayer = L.layerGroup().addTo(map);
+        let suggestionTimeout;
+        const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33'];
+
+        // --- Manually Provided CSV Data ---
+        const allCsvData = `ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
+2025-03-30T01:09:44Z,KFWS,R0,100,20,0.5,33.914,-98.520
+2025-03-30T01:10:56Z,KFDR,P0,100,50,1,33.934,-98.499
+2025-03-30T01:12:53Z,KTLX,P0,100,40,1,33.922,-98.502
+2025-03-30T01:13:01Z,KDYX,S0,100,40,0.75,33.939,-98.505
+2025-03-30T01:13:40Z,KFWS,R0,100,40,1,33.945,-98.504
+ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
+2025-04-24T09:32:07Z,KFDR,U6,100,0,0.5,33.857,-98.452
+2025-04-24T09:32:40Z,KDYX,C7,100,0,0.5,33.901,-98.455
+2025-04-24T09:32:53Z,KFWS,T8,100,10,0.5,33.874,-98.483
+2025-04-24T09:36:22Z,KFWS,T8,100,0,0.5,33.861,-98.471
+ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
+2025-04-30T01:22:25Z,KDYX,Z7,100,60,1.25,33.852,-98.518
+ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
+2025-04-05T06:41:29Z,KFWS,N3,100,100,3,33.852,-98.550
+2025-04-05T06:41:42Z,KFDR,R3,100,100,3.5,33.888,-98.533
+2025-04-05T06:42:05Z,KTLX,B8,100,100,3,33.868,-98.548
+2025-04-05T06:42:33Z,KDYX,S4,100,100,2.25,33.878,-98.538
+2025-04-05T06:44:58Z,KFWS,N3,100,100,3.25,33.901,-98.508
+2025-04-05T06:45:42Z,KTLX,B8,100,100,3,33.891,-98.484
+2025-04-05T06:46:58Z,KFDR,R3,100,100,2.75,33.936,-98.467
+2025-04-05T06:48:27Z,KFWS,N3,100,100,2.75,33.905,-98.468`;
+
+        // --- UI Elements ---
+        const addressInput = document.getElementById('address-input');
+        const addressSuggestions = document.getElementById('address-suggestions');
+        const removeAllBtn = document.getElementById('remove-all-btn');
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmRemoveBtn = document.getElementById('confirm-remove');
+        const cancelRemoveBtn = document.getElementById('cancel-remove');
+        const stormDatePanelContainer = document.getElementById('storm-date-panel-container');
+        const toggleStormPanelBtn = document.getElementById('toggle-storm-panel');
+        const stormDateList = document.getElementById('storm-date-list');
+        const legendPanel = document.getElementById('legend-panel');
+        const legendContent = document.getElementById('legend-content');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadModal = document.getElementById('upload-modal');
+        const cancelUploadBtn = document.getElementById('cancel-upload');
+        const confirmUploadBtn = document.getElementById('confirm-upload');
+        const fileUploadInput = document.getElementById('file-upload');
+        const textUploadArea = document.getElementById('text-upload');
+        const addressListPanelContainer = document.getElementById('address-list-panel-container');
+        const addressListContent = document.getElementById('address-list-content');
+        const removeSelectedBtn = document.getElementById('remove-selected-btn');
+        const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
+        const clusterSlider = document.getElementById('cluster-slider');
+
+        // --- Marker Icons ---
+        const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+        // --- NEW: Data Persistence Functions ---
+        function saveMarkersToLocalStorage() {
+            const markerData = [];
+            markers.eachLayer(layer => {
+                markerData.push({
+                    lat: layer.getLatLng().lat,
+                    lon: layer.getLatLng().lng,
+                    id: layer.options.id,
+                    address: layer.options.address,
+                    inspectionStatus: layer.options.inspectionStatus
+                });
+            });
+            localStorage.setItem('savedStormMarkers', JSON.stringify(markerData));
+        }
+
+        function loadMarkersFromLocalStorage() {
+            const savedData = localStorage.getItem('savedStormMarkers');
+            if (savedData) {
+                const markerData = JSON.parse(savedData);
+                markerData.forEach(data => {
+                    // Pass the full saved data object to addMarker
+                    addMarker(data.lat, data.lon, data.address, {
+                        id: data.id,
+                        inspectionStatus: data.inspectionStatus,
+                        shouldOpenPopup: false // Don't open popups on initial load
+                    });
+                });
+            }
+        }
+        
+        // --- Address Search & Geocoding ---
+        async function fetchAddressSuggestions(query) {
+            if (query.length < 3) {
+                addressSuggestions.innerHTML = '';
+                addressSuggestions.classList.add('hidden');
+                return;
+            }
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                displaySuggestions(data);
+            } catch (error) { console.error('Error fetching address suggestions:', error); }
+        }
+
+        function displaySuggestions(suggestions) {
+            if (suggestions.length === 0) {
+                addressSuggestions.innerHTML = '<div class="p-3 text-gray-500">No results found.</div>';
+            } else {
+                addressSuggestions.innerHTML = suggestions.slice(0, 5).map(s => 
+                    `<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${s.lat}" data-lon="${s.lon}" data-name="${s.display_name}">${s.display_name}</div>`
+                ).join('');
+            }
+            addressSuggestions.classList.remove('hidden');
+        }
+
+        addressInput.addEventListener('keyup', (e) => {
+            clearTimeout(suggestionTimeout);
+            suggestionTimeout = setTimeout(() => fetchAddressSuggestions(e.target.value), 300);
+        });
+
+        addressSuggestions.addEventListener('click', (e) => {
+            const suggestion = e.target.closest('div');
+            if (suggestion) {
+                const lat = parseFloat(suggestion.dataset.lat);
+                const lon = parseFloat(suggestion.dataset.lon);
+                const name = suggestion.dataset.name;
+                addMarker(lat, lon, name);
+                addressInput.value = '';
+                addressSuggestions.classList.add('hidden');
+            }
+        });
+
+        // --- Marker Management (MODIFIED) ---
+        function addMarker(lat, lon, name, options = {}) {
+            // Use saved ID and status if provided, otherwise create new ones
+            const markerId = options.id || `marker-${Date.now()}`;
+            const inspectionStatus = options.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
+            const shouldOpenPopup = options.shouldOpenPopup !== false;
+
+            const marker = L.marker([lat, lon], { 
+                id: markerId, 
+                address: name,
+                inspectionStatus: inspectionStatus
+            });
+            
+            marker.bindPopup(() => createPopupContent(markerId, name, marker.options.inspectionStatus));
+            marker.on('popupopen', () => populatePopup(markerId, marker.options.inspectionStatus));
+
+            markers.addLayer(marker);
+            
+            // Set the correct icon on load
+            updateMarkerIcon(marker);
+            
+            if (shouldOpenPopup) {
+                markers.zoomToShowLayer(marker, () => marker.openPopup());
+            }
+            
+            // Save state after adding a marker
+            saveMarkersToLocalStorage();
+            updateAddressRemovalList();
+        }
+
+        function createPopupContent(markerId, name, status) {
+            return `
+                <div class="space-y-3">
+                    <p class="font-bold text-gray-800">${name}</p>
+                    <div class="border-t pt-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="inspected-${markerId}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${markerId}')">
+                            <span class="ml-2 font-semibold text-gray-700">Inspected</span>
+                        </label>
+                    </div>
+                    <div id="damage-options-${markerId}" class="space-y-1 pl-4">
+                        <label><input type="radio" name="damage-${markerId}" value="damaged" onchange="updateMarkerStatus('${markerId}')" disabled> Damaged</label><br>
+                        <label><input type="radio" name="damage-${markerId}" value="no_damage" onchange="updateMarkerStatus('${markerId}')" disabled> No Damage</label><br>
+                        <label><input type="radio" name="damage-${markerId}" value="review" onchange="updateMarkerStatus('${markerId}')" disabled> Further Review</label>
+                    </div>
+                    <div>
+                        <label for="photo-link-${markerId}" class="text-sm font-medium">Link to Photos</label>
+                        <input type="text" id="photo-link-${markerId}" class="w-full p-1 border border-gray-300 rounded-md mt-1" oninput="updateMarkerStatus('${markerId}')">
+                    </div>
+                    <button class="popup-button-remove" onclick="removeMarker('${markerId}')">Remove</button>
+                </div>
+            `;
+        }
+
+        function populatePopup(markerId, status) {
+            document.getElementById(`inspected-${markerId}`).checked = status.inspected;
+            document.getElementById(`photo-link-${markerId}`).value = status.photoLink;
+            
+            const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
+            damageRadios.forEach(radio => {
+                radio.disabled = !status.inspected;
+                if (radio.value === status.damage) {
+                    radio.checked = true;
+                }
+            });
+        }
+
+        window.updateMarkerStatus = function(markerId) {
+            markers.eachLayer(layer => {
+                if (layer.options.id === markerId) {
+                    const inspected = document.getElementById(`inspected-${markerId}`).checked;
+                    const photoLink = document.getElementById(`photo-link-${markerId}`).value;
+                    let damage = 'none';
+                    if (inspected) {
+                        const selectedRadio = document.querySelector(`input[name="damage-${markerId}"]:checked`);
+                        if(selectedRadio) damage = selectedRadio.value;
+                    }
+
+                    layer.options.inspectionStatus = { inspected, damage, photoLink };
+                    updateMarkerIcon(layer);
+                    
+                    const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
+                    damageRadios.forEach(radio => radio.disabled = !inspected);
+                    
+                    saveMarkersToLocalStorage(); // Save changes
+                    updateAddressRemovalList();
+                }
+            });
+        }
+
+        function updateMarkerIcon(marker) {
+            const status = marker.options.inspectionStatus;
+            if (!status.inspected) {
+                marker.setIcon(blueIcon);
+            } else {
+                switch(status.damage) {
+                    case 'damaged': marker.setIcon(greenIcon); break;
+                    case 'no_damage': marker.setIcon(redIcon); break;
+                    case 'review': marker.setIcon(yellowIcon); break;
+                    default: marker.setIcon(blueIcon);
+                }
+            }
+        }
+
+        window.removeMarker = function(markerId) {
+            markers.eachLayer(layer => {
+                if (layer.options.id === markerId) {
+                    markers.removeLayer(layer);
+                }
+            });
+            saveMarkersToLocalStorage(); // Save changes
+            updateAddressRemovalList();
+        }
+
+        function updateAddressRemovalList() {
+            const layers = markers.getLayers();
+            
+            const filters = {
+                inspected: document.querySelector('input[name="filter"][value="inspected"]')?.checked,
+                not_inspected: document.querySelector('input[name="filter"][value="not_inspected"]')?.checked,
+                damaged: document.querySelector('input[name="filter"][value="damaged"]')?.checked,
+                no_damage: document.querySelector('input[name="filter"][value="no_damage"]')?.checked,
+                review: document.querySelector('input[name="filter"][value="review"]')?.checked,
+            };
+
+            const filteredLayers = layers.filter(l => {
+                const status = l.options.inspectionStatus;
+                
+                const inspectedFilter = (filters.inspected && status.inspected) || (filters.not_inspected && !status.inspected) || (!filters.inspected && !filters.not_inspected);
+                if (!inspectedFilter) return false;
+
+                const damageFilters = ['damaged', 'no_damage', 'review'].filter(f => filters[f]);
+                if (damageFilters.length > 0 && !damageFilters.includes(status.damage)) {
+                    return false;
+                }
+
+                return true;
+            });
+            
+            if (layers.length > 0) {
+                toggleAddressListBtn.classList.remove('hidden');
+                addressListContent.innerHTML = filteredLayers.map(l => `
+                    <div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')">
+                         <input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2">
+                         <span class="text-xs truncate">${l.options.address}</span>
+                    </div>
+                `).join('');
+            } else {
+                toggleAddressListBtn.classList.add('hidden');
+                addressListPanelContainer.classList.add('closed');
+            }
+        }
+        
+        window.zoomToMarker = function(markerId) {
+            markers.eachLayer(layer => {
+                if (layer.options.id === markerId) {
+                    markers.zoomToShowLayer(layer, () => layer.openPopup());
+                }
+            });
+        }
+        
+        removeSelectedBtn.addEventListener('click', () => {
+            const selectedRadio = addressListContent.querySelector('input[name="address-to-remove"]:checked');
+            if (selectedRadio) {
+                removeMarker(selectedRadio.value);
+            }
+        });
+
+        removeAllBtn.addEventListener('click', () => confirmationModal.classList.remove('hidden'));
+        confirmRemoveBtn.addEventListener('click', () => {
+            markers.clearLayers();
+            swathLayer.clearLayers();
+            legendPanel.classList.add('hidden');
+            document.querySelectorAll('#storm-date-list input').forEach(cb => cb.checked = false);
+            updateAddressRemovalList();
+            saveMarkersToLocalStorage(); // Save after clearing all
+            confirmationModal.classList.add('hidden');
+        });
+        cancelRemoveBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
+        
+        // --- Upload Modal Logic ---
+        uploadBtn.addEventListener('click', () => uploadModal.classList.remove('hidden'));
+        cancelUploadBtn.addEventListener('click', () => uploadModal.classList.add('hidden'));
+        confirmUploadBtn.addEventListener('click', handleUpload);
+
+        // --- Mass Import Logic ---
+        async function handleUpload() {
+            const file = fileUploadInput.files[0];
+            const text = textUploadArea.value;
+            let addresses = [];
+
+            if (file) {
+                addresses = await parseFile(file);
+            } else if (text.trim()) {
+                addresses = text.trim().split('\n').filter(line => line.trim() !== '');
+            }
+
+            if (addresses.length === 0) {
+                alert("No addresses found to upload.");
+                return;
+            }
+
+            uploadModal.classList.add('hidden');
+            fileUploadInput.value = '';
+            textUploadArea.value = '';
+            
+            showTemporaryMessage("System Loading Addresses, Grab a coffee or Touch Grass, It will take a short while to load all addresses");
+            await processAddressList(addresses);
+        }
+        
+        function showTemporaryMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.classList.add('opacity-0');
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 500);
+            }, 6000);
+        }
+
+        function parseFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+                        resolve(content.trim().split('\n').filter(line => line.trim() !== ''));
+                    } else if (file.name.endsWith('.xlsx')) {
+                        const workbook = XLSX.read(content, { type: 'binary' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        resolve(json.map(row => row[0]).filter(addr => addr));
+                    } else {
+                        reject(new Error("Unsupported file type."));
+                    }
+                };
+                reader.onerror = (err) => reject(err);
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        async function processAddressList(addresses) {
+            const statusIndicator = createStatusIndicator();
+            for (let i = 0; i < addresses.length; i++) {
+                const address = addresses[i];
+                statusIndicator.textContent = `Loading Address ${i + 1} of ${addresses.length}...`;
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        const { lat, lon, display_name } = data[0];
+                        // The main addMarker function will handle saving now
+                        addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
+                    } else {
+                        console.warn(`Could not geocode address: ${address}`);
+                    }
+                } catch (error) {
+                    console.error(`Error geocoding ${address}:`, error);
+                }
+                await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit
+            }
+            statusIndicator.textContent = 'Done!';
+            statusIndicator.classList.remove('bg-yellow-500');
+            statusIndicator.classList.add('bg-green-500');
+            setTimeout(() => statusIndicator.remove(), 3000);
+            if (markers.getLayers().length > 0) {
+                map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        function createStatusIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
+            document.getElementById('top-right-controls').prepend(indicator);
+            return indicator;
+        }
+
+        // --- Storm Data & Panel Logic ---
+        function parseCsv(csvText) {
+            const lines = csvText.trim().split('\n');
+            const allPoints = [];
+            let header = [];
+            lines.forEach(line => {
+                if (line.startsWith('ZTIME')) {
+                    header = line.split(',').map(h => h.trim());
+                    return;
+                }
+                if (line.startsWith('summary') || header.length === 0) return;
+                
+                const values = line.split(',');
+                const point = header.reduce((obj, nextKey, index) => {
+                    obj[nextKey] = values[index];
+                    return obj;
+                }, {});
+                allPoints.push(point);
+            });
+            return allPoints;
+        }
+
+        const stormData = parseCsv(allCsvData);
+
+        function populateStormDatePanel() {
+            const dailyMaxHail = {};
+            stormData.forEach(event => {
+                const date = event.ZTIME.split('T')[0];
+                const size = parseFloat(event.MAXSIZE);
+                if (size > 0 && (!dailyMaxHail[date] || size > dailyMaxHail[date])) {
+                    dailyMaxHail[date] = size;
+                }
+            });
+
+            const sortedDates = Object.entries(dailyMaxHail).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+            stormDateList.innerHTML = sortedDates.map(([date, size]) => `
+                <label class="flex items-center">
+                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                           onchange="handleDateSelection()" value="${date}">
+                    <span class="ml-2 text-gray-700">${date} (${size.toFixed(2)}" hail)</span>
+                </label>
+            `).join('');
+        }
+        
+        window.handleDateSelection = function() {
+            swathLayer.clearLayers();
+            const checkboxes = stormDateList.querySelectorAll('input[type="checkbox"]:checked');
+            const selectedDates = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedDates.length === 0) {
+                legendPanel.classList.add('hidden');
+                return;
+            }
+
+            legendPanel.classList.remove('hidden');
+            legendContent.innerHTML = '';
+            
+            selectedDates.forEach((date, index) => {
+                const color = stormColors[index % stormColors.length];
+                const pointsForDate = stormData.filter(p => p.ZTIME.startsWith(date) && parseFloat(p.MAXSIZE) > 0);
+                drawHailSwath(pointsForDate, color);
+                
+                const maxHail = Math.max(...pointsForDate.map(p => parseFloat(p.MAXSIZE)));
+                legendContent.innerHTML += `
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div>
+                        <span>${date} (${maxHail.toFixed(2)}")</span>
+                    </div>
+                `;
+            });
+        }
+
+        function drawHailSwath(pointsForDate, color) {
+            if (pointsForDate.length < 3) {
+                 pointsForDate.forEach(p => {
+                    L.circle([parseFloat(p.LAT), parseFloat(p.LON)], {
+                        radius: 1609,
+                        color: color, weight: 1, opacity: 0.7, fillColor: color, fillOpacity: 0.2
+                    }).addTo(swathLayer);
+                 });
+                 return;
+            };
+
+            const turfPoints = pointsForDate.map(p => turf.point([parseFloat(p.LON), parseFloat(p.LAT)]));
+            const hull = turf.convex(turf.featureCollection(turfPoints));
+
+            if (hull) {
+                const buffer1 = turf.buffer(hull, 1, {units: 'miles'});
+                const buffer2 = turf.buffer(hull, 2, {units: 'miles'});
+                L.geoJSON(buffer2, { style: () => ({ color: color, weight: 0, fillOpacity: 0.15, fillColor: color }) }).addTo(swathLayer);
+                L.geoJSON(buffer1, { style: () => ({ color: color, weight: 0, fillOpacity: 0.2, fillColor: color }) }).addTo(swathLayer);
+                L.geoJSON(hull, { style: () => ({ color: color, weight: 1, opacity: 0.6, fillColor: color, fillOpacity: 0.3 }) }).addTo(swathLayer);
+            }
+        }
+
+        toggleStormPanelBtn.addEventListener('click', () => {
+            stormDatePanelContainer.classList.toggle('closed');
+        });
+        
+        toggleAddressListBtn.addEventListener('click', () => {
+            addressListPanelContainer.classList.toggle('closed');
+        });
+        
+        // --- Cluster Slider Logic ---
+        clusterSlider.addEventListener('input', (e) => {
+            const newRadius = parseInt(e.target.value, 10);
+            const allMarkers = markers.getLayers();
+            
+            map.removeLayer(markers);
+            markers = L.markerClusterGroup({ maxClusterRadius: newRadius });
+            markers.addLayers(allMarkers);
+            map.addLayer(markers);
+        });
+
+        // --- Initial Load ---
+        populateStormDatePanel();
+        loadMarkersFromLocalStorage(); // Load saved data when the app starts
+        
+        // Add event listeners to new filter checkboxes
+        document.querySelectorAll('input[name="filter"]').forEach(cb => {
+            cb.addEventListener('change', updateAddressRemovalList);
+        });
+    </script>
+</body>
+</html>
