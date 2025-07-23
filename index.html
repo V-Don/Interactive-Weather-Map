@@ -159,19 +159,18 @@
 
     <script>
        <script>
-    // --- START: Firebase Configuration ---
-    // PASTE YOUR COPIED FIREBASE CONFIG OBJECT HERE
-    // It should ONLY contain your keys, like the example below.
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID",
-        measurementId: "YOUR_MEASUREMENT_ID" // This one is optional
-    };
-    // --- END: Firebase Configuration ---
+   // --- START: Firebase Configuration ---
+// This is the correct format for our app (Firebase v8)
+const firebaseConfig = {
+    apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
+    authDomain: "storm-inspector-weather-map.firebaseapp.com",
+    projectId: "storm-inspector-weather-map",
+    storageBucket: "storm-inspector-weather-map.appspot.com",
+    messagingSenderId: "504681972954",
+    appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
+    measurementId: "G-H1413D9HN7"
+};
+// --- END: Firebase Configuration ---
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
