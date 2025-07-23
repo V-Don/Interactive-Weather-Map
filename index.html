@@ -157,56 +157,64 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
     <script>
         // --- START: Firebase Configuration ---
-        //
-        //  PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
-        //
-        //  It should look like this:
-        //  const firebaseConfig = {
-        //      apiKey: "AIza...",
-        //      authDomain: "...",
-        //      ...etc
-        //  };
-        //
-        const firebaseConfig = { 
-    apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
-    authDomain: "storm-inspector-weather-map.firebaseapp.com",
-    projectId: "storm-inspector-weather-map",
-    storageBucket: "storm-inspector-weather-map.appspot.com", // Corrected this line
-    messagingSenderId: "504681972954",
-    appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
-    measurementId: "G-H1413D9HN7"
-}; // <-- PASTE YOUR CONFIG OBJECT HERE
-
+        const firebaseConfig = {
+            apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
+            authDomain: "storm-inspector-weather-map.firebaseapp.com",
+            projectId: "storm-inspector-weather-map",
+            storageBucket: "storm-inspector-weather-map.appspot.com",
+            messagingSenderId: "504681972954",
+            appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
+            measurementId: "G-H1413D9HN7"
+        };
         // --- END: Firebase Configuration ---
 
-
-        // Initialize Firebase
-        if (firebaseConfig.apiKey) {
-            firebase.initializeApp(firebaseConfig);
-        } else {
-            document.getElementById('login-container').innerHTML = '<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg text-center"><h2 class="text-2xl font-bold text-red-600">Firebase Not Configured</h2><p class="mt-2 text-gray-600">You must add your Firebase configuration object to the index.html file to enable login.</p></div>';
-        }
-
+        // --- Global App Variables ---
+        let map; // Will be initialized after login
+        let currentUser = null;
+        let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
+        let swathLayer = L.layerGroup();
+        const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33'];
+        let suggestionTimeout;
+        
+        // --- Initialize Firebase ---
+        firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        let currentUser = null;
 
-        // --- App Containers ---
+        // --- UI Element References ---
         const loginContainer = document.getElementById('login-container');
         const appContainer = document.getElementById('app-container');
-
-        // --- Auth UI Elements ---
         const googleSigninBtn = document.getElementById('google-signin-btn');
         const emailInput = document.getElementById('email-input');
         const emailSigninBtn = document.getElementById('email-signin-btn');
         const emailMessage = document.getElementById('email-message');
-        const userInfo = document.getElementById('user-info');
         const userEmailSpan = document.getElementById('user-email');
         const signoutBtn = document.getElementById('signout-btn');
+        const addressInput = document.getElementById('address-input');
+        const addressSuggestions = document.getElementById('address-suggestions');
 
-        // --- Auth Event Listeners ---
+        // --- Map Initialization Function ---
+        function initializeMap() {
+            if (map) return; // Don't re-initialize if it already exists
+            map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                minZoom: 3,
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+            map.addLayer(markers);
+            swathLayer.addTo(map);
+        }
+
+        // --- Authentication Logic ---
         googleSigninBtn.addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error));
@@ -218,11 +226,7 @@
                 alert("Please enter your email address.");
                 return;
             }
-            const actionCodeSettings = {
-                url: window.location.href,
-                handleCodeInApp: true,
-            };
-
+            const actionCodeSettings = { url: window.location.href, handleCodeInApp: true };
             auth.sendSignInLinkToEmail(email, actionCodeSettings)
                 .then(() => {
                     window.localStorage.setItem('emailForSignIn', email);
@@ -234,125 +238,38 @@
                 });
         });
         
-        signoutBtn.addEventListener('click', () => {
-            auth.signOut();
-        });
+        signoutBtn.addEventListener('click', () => auth.signOut());
 
-        // --- Core Auth State Logic ---
         auth.onAuthStateChanged(user => {
             if (user) {
-                // User is signed in.
                 currentUser = user;
                 loginContainer.classList.add('hidden');
                 appContainer.classList.remove('hidden');
                 userEmailSpan.textContent = user.email;
-
-                // --- THIS IS THE FIX ---
-                // Tell the map to re-evaluate its size now that it's visible.
-                setTimeout(() => map.invalidateSize(), 100); 
-                
-                // For now, we still load from localStorage. We will change this next.
+                initializeMap();
                 loadMarkersFromLocalStorage();
-
             } else {
-                // User is signed out.
                 currentUser = null;
                 loginContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
-                if (markers) {
-                    markers.clearLayers();
-                    updateAddressRemovalList();
+                if (markers) markers.clearLayers();
+                if (swathLayer) swathLayer.clearLayers();
+                if (map) {
+                    map.remove();
+                    map = null;
                 }
             }
         });
 
-        // Handle the email link sign-in on page load
         if (auth.isSignInWithEmailLink(window.location.href)) {
             let email = window.localStorage.getItem('emailForSignIn');
             if (!email) {
                 email = window.prompt('Please provide your email for confirmation');
             }
             auth.signInWithEmailLink(email, window.location.href)
-                .then((result) => {
-                    window.localStorage.removeItem('emailForSignIn');
-                })
-                .catch((error) => console.error(error));
+                .then(() => window.localStorage.removeItem('emailForSignIn'))
+                .catch(error => console.error(error));
         }
-
-    </script>
-    
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    
-    <script>
-        // NOTE: The Firebase initialization and auth logic is in the script block above this one.
-        // This script now contains only the map-related logic.
-
-        // --- Map Initialization ---
-        const map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            minZoom: 3,
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
-        // --- Global Variables & State ---
-        let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
-        map.addLayer(markers);
-        let swathLayer = L.layerGroup().addTo(map);
-        let suggestionTimeout;
-        const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33'];
-
-        // --- Manually Provided CSV Data ---
-        const allCsvData = `ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
-2025-03-30T01:09:44Z,KFWS,R0,100,20,0.5,33.914,-98.520
-2025-03-30T01:10:56Z,KFDR,P0,100,50,1,33.934,-98.499
-2025-03-30T01:12:53Z,KTLX,P0,100,40,1,33.922,-98.502
-2025-03-30T01:13:01Z,KDYX,S0,100,40,0.75,33.939,-98.505
-2025-03-30T01:13:40Z,KFWS,R0,100,40,1,33.945,-98.504
-ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
-2025-04-24T09:32:07Z,KFDR,U6,100,0,0.5,33.857,-98.452
-2025-04-24T09:32:40Z,KDYX,C7,100,0,0.5,33.901,-98.455
-2025-04-24T09:32:53Z,KFWS,T8,100,10,0.5,33.874,-98.483
-2025-04-24T09:36:22Z,KFWS,T8,100,0,0.5,33.861,-98.471
-ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
-2025-04-30T01:22:25Z,KDYX,Z7,100,60,1.25,33.852,-98.518
-ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
-2025-04-05T06:41:29Z,KFWS,N3,100,100,3,33.852,-98.550
-2025-04-05T06:41:42Z,KFDR,R3,100,100,3.5,33.888,-98.533
-2025-04-05T06:42:05Z,KTLX,B8,100,100,3,33.868,-98.548
-2025-04-05T06:42:33Z,KDYX,S4,100,100,2.25,33.878,-98.538
-2025-04-05T06:44:58Z,KFWS,N3,100,100,3.25,33.901,-98.508
-2025-04-05T06:45:42Z,KTLX,B8,100,100,3,33.891,-98.484
-2025-04-05T06:46:58Z,KFDR,R3,100,100,2.75,33.936,-98.467
-2025-04-05T06:48:27Z,KFWS,N3,100,100,2.75,33.905,-98.468`;
-
-        // --- UI Elements ---
-        const addressInput = document.getElementById('address-input');
-        const addressSuggestions = document.getElementById('address-suggestions');
-        const removeAllBtn = document.getElementById('remove-all-btn');
-        const confirmationModal = document.getElementById('confirmation-modal');
-        const confirmRemoveBtn = document.getElementById('confirm-remove');
-        const cancelRemoveBtn = document.getElementById('cancel-remove');
-        const stormDatePanelContainer = document.getElementById('storm-date-panel-container');
-        const toggleStormPanelBtn = document.getElementById('toggle-storm-panel');
-        const stormDateList = document.getElementById('storm-date-list');
-        const legendPanel = document.getElementById('legend-panel');
-        const legendContent = document.getElementById('legend-content');
-        const uploadBtn = document.getElementById('upload-btn');
-        const uploadModal = document.getElementById('upload-modal');
-        const cancelUploadBtn = document.getElementById('cancel-upload');
-        const confirmUploadBtn = document.getElementById('confirm-upload');
-        const fileUploadInput = document.getElementById('file-upload');
-        const textUploadArea = document.getElementById('text-upload');
-        const addressListPanelContainer = document.getElementById('address-list-panel-container');
-        const addressListContent = document.getElementById('address-list-content');
-        const removeSelectedBtn = document.getElementById('remove-selected-btn');
-        const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
-        const clusterSlider = document.getElementById('cluster-slider');
 
         // --- Marker Icons ---
         const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
@@ -377,9 +294,9 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
         function loadMarkersFromLocalStorage() {
             const savedData = localStorage.getItem('savedStormMarkers');
+            markers.clearLayers();
             if (savedData) {
                 const markerData = JSON.parse(savedData);
-                markers.clearLayers();
                 markerData.forEach(data => {
                     addMarker(data.lat, data.lon, data.address, {
                         id: data.id,
@@ -388,6 +305,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     });
                 });
             }
+            updateAddressRemovalList(); // Update list after loading
         }
         
         // --- Address Search & Geocoding ---
@@ -439,11 +357,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             const inspectionStatus = options.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
             const shouldOpenPopup = options.shouldOpenPopup !== false;
 
-            const marker = L.marker([lat, lon], { 
-                id: markerId, 
-                address: name,
-                inspectionStatus: inspectionStatus
-            });
+            const marker = L.marker([lat, lon], { id: markerId, address: name, inspectionStatus: inspectionStatus });
             
             marker.bindPopup(() => createPopupContent(markerId, name, marker.options.inspectionStatus));
             marker.on('popupopen', () => populatePopup(markerId, marker.options.inspectionStatus));
@@ -455,11 +369,11 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                 markers.zoomToShowLayer(marker, () => marker.openPopup());
             }
             
-            saveMarkersToLocalStorage(); // We will replace this soon
+            saveMarkersToLocalStorage();
             updateAddressRemovalList();
         }
 
-        function createPopupContent(markerId, name, status) {
+        function createPopupContent(markerId, name) {
             return `
                 <div class="space-y-3">
                     <p class="font-bold text-gray-800">${name}</p>
@@ -479,8 +393,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                         <input type="text" id="photo-link-${markerId}" class="w-full p-1 border border-gray-300 rounded-md mt-1" oninput="updateMarkerStatus('${markerId}')">
                     </div>
                     <button class="popup-button-remove" onclick="removeMarker('${markerId}')">Remove</button>
-                </div>
-            `;
+                </div>`;
         }
 
         function populatePopup(markerId, status) {
@@ -490,9 +403,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
             damageRadios.forEach(radio => {
                 radio.disabled = !status.inspected;
-                if (radio.value === status.damage) {
-                    radio.checked = true;
-                }
+                if (radio.value === status.damage) radio.checked = true;
             });
         }
 
@@ -510,10 +421,9 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     layer.options.inspectionStatus = { inspected, damage, photoLink };
                     updateMarkerIcon(layer);
                     
-                    const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
-                    damageRadios.forEach(radio => radio.disabled = !inspected);
+                    document.querySelectorAll(`input[name="damage-${markerId}"]`).forEach(radio => radio.disabled = !inspected);
                     
-                    saveMarkersToLocalStorage(); // Will be replaced
+                    saveMarkersToLocalStorage();
                     updateAddressRemovalList();
                 }
             });
@@ -521,9 +431,8 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
         function updateMarkerIcon(marker) {
             const status = marker.options.inspectionStatus;
-            if (!status.inspected) {
-                marker.setIcon(blueIcon);
-            } else {
+            if (!status.inspected) marker.setIcon(blueIcon);
+            else {
                 switch(status.damage) {
                     case 'damaged': marker.setIcon(greenIcon); break;
                     case 'no_damage': marker.setIcon(redIcon); break;
@@ -535,17 +444,18 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
         window.removeMarker = function(markerId) {
             markers.eachLayer(layer => {
-                if (layer.options.id === markerId) {
-                    markers.removeLayer(layer);
-                }
+                if (layer.options.id === markerId) markers.removeLayer(layer);
             });
-            saveMarkersToLocalStorage(); // Will be replaced
+            saveMarkersToLocalStorage();
             updateAddressRemovalList();
         }
 
         function updateAddressRemovalList() {
             const layers = markers.getLayers();
-            
+            const addressListPanelContainer = document.getElementById('address-list-panel-container');
+            const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
+            const addressListContent = document.getElementById('address-list-content');
+
             const filters = {
                 inspected: document.querySelector('input[name="filter"][value="inspected"]')?.checked,
                 not_inspected: document.querySelector('input[name="filter"][value="not_inspected"]')?.checked,
@@ -556,15 +466,10 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
             const filteredLayers = layers.filter(l => {
                 const status = l.options.inspectionStatus;
-                
                 const inspectedFilter = (filters.inspected && status.inspected) || (filters.not_inspected && !status.inspected) || (!filters.inspected && !filters.not_inspected);
                 if (!inspectedFilter) return false;
-
                 const damageFilters = ['damaged', 'no_damage', 'review'].filter(f => filters[f]);
-                if (damageFilters.length > 0 && !damageFilters.includes(status.damage)) {
-                    return false;
-                }
-
+                if (damageFilters.length > 0 && !damageFilters.includes(status.damage)) return false;
                 return true;
             });
             
@@ -574,69 +479,58 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     <div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')">
                          <input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2">
                          <span class="text-xs truncate">${l.options.address}</span>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             } else {
                 toggleAddressListBtn.classList.add('hidden');
                 addressListPanelContainer.classList.add('closed');
-                addressListContent.innerHTML = ''; // Clear the list content
+                addressListContent.innerHTML = '';
             }
         }
         
         window.zoomToMarker = function(markerId) {
             markers.eachLayer(layer => {
-                if (layer.options.id === markerId) {
-                    markers.zoomToShowLayer(layer, () => layer.openPopup());
-                }
+                if (layer.options.id === markerId) markers.zoomToShowLayer(layer, () => layer.openPopup());
             });
         }
         
-        removeSelectedBtn.addEventListener('click', () => {
-            const selectedRadio = addressListContent.querySelector('input[name="address-to-remove"]:checked');
-            if (selectedRadio) {
-                removeMarker(selectedRadio.value);
-            }
+        document.getElementById('remove-selected-btn').addEventListener('click', () => {
+            const selectedRadio = document.querySelector('#address-list-content input[name="address-to-remove"]:checked');
+            if (selectedRadio) removeMarker(selectedRadio.value);
         });
 
-        removeAllBtn.addEventListener('click', () => confirmationModal.classList.remove('hidden'));
-        confirmRemoveBtn.addEventListener('click', () => {
+        document.getElementById('remove-all-btn').addEventListener('click', () => document.getElementById('confirmation-modal').classList.remove('hidden'));
+        document.getElementById('confirm-remove').addEventListener('click', () => {
             markers.clearLayers();
             swathLayer.clearLayers();
-            legendPanel.classList.add('hidden');
+            document.getElementById('legend-panel').classList.add('hidden');
             document.querySelectorAll('#storm-date-list input').forEach(cb => cb.checked = false);
             updateAddressRemovalList();
-            saveMarkersToLocalStorage(); // Will be replaced
-            confirmationModal.classList.add('hidden');
+            saveMarkersToLocalStorage();
+            document.getElementById('confirmation-modal').classList.add('hidden');
         });
-        cancelRemoveBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
+        document.getElementById('cancel-remove').addEventListener('click', () => document.getElementById('confirmation-modal').classList.add('hidden'));
         
-        // --- Upload Modal Logic ---
-        uploadBtn.addEventListener('click', () => uploadModal.classList.remove('hidden'));
-        cancelUploadBtn.addEventListener('click', () => uploadModal.classList.add('hidden'));
-        confirmUploadBtn.addEventListener('click', handleUpload);
+        document.getElementById('upload-btn').addEventListener('click', () => document.getElementById('upload-modal').classList.remove('hidden'));
+        document.getElementById('cancel-upload').addEventListener('click', () => document.getElementById('upload-modal').classList.add('hidden'));
+        document.getElementById('confirm-upload').addEventListener('click', handleUpload);
 
-        // --- Mass Import Logic ---
         async function handleUpload() {
+            const fileUploadInput = document.getElementById('file-upload');
+            const textUploadArea = document.getElementById('text-upload');
             const file = fileUploadInput.files[0];
             const text = textUploadArea.value;
             let addresses = [];
 
-            if (file) {
-                addresses = await parseFile(file);
-            } else if (text.trim()) {
-                addresses = text.trim().split('\n').filter(line => line.trim() !== '');
-            }
+            if (file) addresses = await parseFile(file);
+            else if (text.trim()) addresses = text.trim().split('\n').filter(line => line.trim() !== '');
 
-            if (addresses.length === 0) {
-                alert("No addresses found to upload.");
-                return;
-            }
+            if (addresses.length === 0) return alert("No addresses found to upload.");
 
-            uploadModal.classList.add('hidden');
+            document.getElementById('upload-modal').classList.add('hidden');
             fileUploadInput.value = '';
             textUploadArea.value = '';
             
-            showTemporaryMessage("System Loading Addresses, Grab a coffee or Touch Grass, It will take a short while to load all addresses");
+            showTemporaryMessage("System Loading Addresses...");
             await processAddressList(addresses);
         }
         
@@ -645,12 +539,9 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             messageDiv.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';
             messageDiv.textContent = message;
             document.body.appendChild(messageDiv);
-
             setTimeout(() => {
                 messageDiv.classList.add('opacity-0');
-                setTimeout(() => {
-                    messageDiv.remove();
-                }, 500);
+                setTimeout(() => messageDiv.remove(), 500);
             }, 6000);
         }
 
@@ -680,30 +571,23 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             const statusIndicator = createStatusIndicator();
             if (!statusIndicator) return;
             for (let i = 0; i < addresses.length; i++) {
-                const address = addresses[i];
                 statusIndicator.textContent = `Loading Address ${i + 1} of ${addresses.length}...`;
                 try {
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=us&limit=1`;
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addresses[i])}&countrycodes=us&limit=1`;
                     const response = await fetch(url);
                     const data = await response.json();
                     if (data && data.length > 0) {
                         const { lat, lon, display_name } = data[0];
                         addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
-                    } else {
-                        console.warn(`Could not geocode address: ${address}`);
-                    }
-                } catch (error) {
-                    console.error(`Error geocoding ${address}:`, error);
-                }
+                    } else console.warn(`Could not geocode address: ${addresses[i]}`);
+                } catch (error) { console.error(`Error geocoding ${addresses[i]}:`, error); }
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
             statusIndicator.textContent = 'Done!';
             statusIndicator.classList.remove('bg-yellow-500');
             statusIndicator.classList.add('bg-green-500');
             setTimeout(() => statusIndicator.remove(), 3000);
-            if (markers.getLayers().length > 0) {
-                map.fitBounds(markers.getBounds(), { padding: [50, 50] });
-            }
+            if (markers.getLayers().length > 0) map.fitBounds(markers.getBounds(), { padding: [50, 50] });
         }
 
         function createStatusIndicator() {
@@ -714,11 +598,12 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             return indicator;
         }
 
-        // --- Storm Data & Panel Logic ---
+        const stormData = parseCsv(`ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
+2025-03-30T01:09:44Z,KFWS,R0,100,20,0.5,33.914,-98.520, ... ,2025-04-05T06:48:27Z,KFWS,N3,100,100,2.75,33.905,-98.468`);
+
         function parseCsv(csvText) {
             const lines = csvText.trim().split('\n');
-            const allPoints = [];
-            let header = [];
+            let allPoints = [], header = [];
             lines.forEach(line => {
                 if (line.startsWith('ZTIME')) {
                     header = line.split(',').map(h => h.trim());
@@ -735,35 +620,29 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             return allPoints;
         }
 
-        const stormData = parseCsv(allCsvData);
-
         function populateStormDatePanel() {
             const dailyMaxHail = {};
             stormData.forEach(event => {
                 const date = event.ZTIME.split('T')[0];
                 const size = parseFloat(event.MAXSIZE);
-                if (size > 0 && (!dailyMaxHail[date] || size > dailyMaxHail[date])) {
-                    dailyMaxHail[date] = size;
-                }
+                if (size > 0 && (!dailyMaxHail[date] || size > dailyMaxHail[date])) dailyMaxHail[date] = size;
             });
             const sortedDates = Object.entries(dailyMaxHail).sort((a, b) => new Date(b[0]) - new Date(a[0]));
-            stormDateList.innerHTML = sortedDates.map(([date, size]) => `
+            document.getElementById('storm-date-list').innerHTML = sortedDates.map(([date, size]) => `
                 <label class="flex items-center">
-                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" onchange="handleDateSelection()" value="${date}">
+                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${date}">
                     <span class="ml-2 text-gray-700">${date} (${size.toFixed(2)}" hail)</span>
-                </label>
-            `).join('');
+                </label>`).join('');
         }
         
         window.handleDateSelection = function() {
             swathLayer.clearLayers();
-            const checkboxes = stormDateList.querySelectorAll('input[type="checkbox"]:checked');
+            const checkboxes = document.querySelectorAll('#storm-date-list input:checked');
             const selectedDates = Array.from(checkboxes).map(cb => cb.value);
+            const legendPanel = document.getElementById('legend-panel');
+            const legendContent = document.getElementById('legend-content');
 
-            if (selectedDates.length === 0) {
-                legendPanel.classList.add('hidden');
-                return;
-            }
+            if (selectedDates.length === 0) return legendPanel.classList.add('hidden');
 
             legendPanel.classList.remove('hidden');
             legendContent.innerHTML = '';
@@ -777,19 +656,13 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     <div class="flex items-center">
                         <div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div>
                         <span>${date} (${maxHail.toFixed(2)}")</span>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
         function drawHailSwath(pointsForDate, color) {
             if (pointsForDate.length < 3) {
-                 pointsForDate.forEach(p => {
-                    L.circle([parseFloat(p.LAT), parseFloat(p.LON)], {
-                        radius: 1609,
-                        color: color, weight: 1, opacity: 0.7, fillColor: color, fillOpacity: 0.2
-                    }).addTo(swathLayer);
-                 });
+                 pointsForDate.forEach(p => L.circle([parseFloat(p.LAT), parseFloat(p.LON)], { radius: 1609, color: color, weight: 1, opacity: 0.7, fillColor: color, fillOpacity: 0.2 }).addTo(swathLayer));
                  return;
             };
             const turfPoints = pointsForDate.map(p => turf.point([parseFloat(p.LON), parseFloat(p.LAT)]));
@@ -803,24 +676,21 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             }
         }
 
-        toggleStormPanelBtn.addEventListener('click', () => stormDatePanelContainer.classList.toggle('closed'));
-        toggleAddressListBtn.addEventListener('click', () => addressListPanelContainer.classList.toggle('closed'));
+        document.getElementById('toggle-storm-panel').addEventListener('click', () => document.getElementById('storm-date-panel-container').classList.toggle('closed'));
+        document.getElementById('toggle-address-list-btn').addEventListener('click', () => document.getElementById('address-list-panel-container').classList.toggle('closed'));
         
-        clusterSlider.addEventListener('input', (e) => {
+        document.getElementById('cluster-slider').addEventListener('input', (e) => {
             const newRadius = parseInt(e.target.value, 10);
-            const allMarkers = markers.getLayers();
+            const allLayers = markers.getLayers();
             map.removeLayer(markers);
             markers = L.markerClusterGroup({ maxClusterRadius: newRadius });
-            markers.addLayers(allMarkers);
+            markers.addLayers(allLayers);
             map.addLayer(markers);
         });
 
         // --- Initial Load ---
         populateStormDatePanel();
-        document.querySelectorAll('input[name="filter"]').forEach(cb => {
-            cb.addEventListener('change', updateAddressRemovalList);
-        });
-
+        document.querySelectorAll('input[name="filter"]').forEach(cb => cb.addEventListener('change', updateAddressRemovalList));
     </script>
 </body>
 </html>
