@@ -10,19 +10,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
     <style>
-        html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; }
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #map { height: 100%; width: 100%; }
         .leaflet-popup-content-wrapper { border-radius: 8px; background-color: #f9fafb; }
-        .leaflet-popup-content { margin: 15px; font-family: 'Inter', sans-serif; }
+        .leaflet-popup-content { margin: 15px; }
         .popup-button-remove {
             padding: 6px 12px; border-radius: 6px; border: none; color: white;
             font-size: 14px; cursor: pointer; margin-top: 10px; transition: background-color 0.2s;
@@ -33,135 +26,263 @@
         #storm-date-panel-container, #address-list-panel-container { transition: transform 0.3s ease-in-out; }
         #storm-date-panel-container.closed { transform: translateX(-100%); }
         #address-list-panel-container.closed { transform: translateX(100%); }
-        
-        /* Custom styles for the zoom slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: transparent;
-            cursor: pointer;
-            width: 100%;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            background: #e5e7eb;
-            height: 0.5rem;
-            border-radius: 0.25rem;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            margin-top: -4px;
-            background-color: #3b82f6;
-            height: 1.25rem;
-            width: 1.25rem;
-            border-radius: 9999px;
-        }
+        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; width: 100%; }
+        input[type=range]::-webkit-slider-runnable-track { background: #e5e7eb; height: 0.5rem; border-radius: 0.25rem; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -4px; background-color: #3b82f6; height: 1.25rem; width: 1.25rem; border-radius: 9999px; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="font-['Inter']">
+<body>
 
-    <div id="map"></div>
-
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl flex flex-col items-center gap-2">
-        <div class="w-full flex items-center gap-2">
-            <div class="relative flex-grow">
-                <input type="text" id="address-input" placeholder="Enter an address..." class="w-full px-4 py-3 text-lg rounded-full shadow-lg border-2 border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                <div id="address-suggestions" class="absolute mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden hidden"></div>
+    <div id="login-container" class="h-full w-full flex items-center justify-center bg-gray-100">
+        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1>
+            <p class="text-gray-500 mb-6">Sign in to access your map</p>
+            
+            <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors mb-4">
+                <svg class="h-6 w-6" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
+                <span class="text-gray-700 font-semibold">Sign in with Google</span>
+            </button>
+            
+            <div class="relative my-4">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
+                <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or with email</span></div>
             </div>
+            
+            <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition mb-3">
+            <button id="email-signin-btn" class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Send Login Link</button>
+            <p id="email-message" class="text-green-600 text-sm mt-3 h-4"></p>
+        </div>
+    </div>
+    
+    <div id="app-container" class="h-full w-full hidden">
+        <div id="map"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl flex flex-col items-center gap-2">
+            <div class="w-full flex items-center gap-2">
+                <div class="relative flex-grow">
+                    <input type="text" id="address-input" placeholder="Enter an address..." class="w-full px-4 py-3 text-lg rounded-full shadow-lg border-2 border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    <div id="address-suggestions" class="absolute mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden hidden"></div>
+                </div>
+                <div class="relative group">
+                    <button id="upload-btn" class="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    </button>
+                    <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">
+                        Upload addresses from a file (.csv, .xlsx, .txt) or paste a list.
+                    </div>
+                </div>
+            </div>
+            <button id="toggle-address-list-btn" class="px-4 py-1 bg-white text-gray-700 text-sm font-semibold rounded-full shadow-md hover:bg-gray-100 transition hidden">Manage Addresses</button>
+        </div>
+        <div id="top-right-controls" class="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2">
+             <div id="user-info" class="flex items-center gap-3 bg-white/90 p-2 rounded-full shadow-md">
+                <span id="user-email" class="text-sm font-medium text-gray-700 hidden sm:block"></span>
+                <button id="signout-btn" class="px-4 py-1 bg-red-600 text-white text-sm font-semibold rounded-full hover:bg-red-700 transition">Sign Out</button>
+            </div>
+            <button id="remove-all-btn" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition mt-2">Remove All Markers</button>
+        </div>
+        <div id="storm-date-panel-container" class="absolute top-1/4 left-0 z-[1000] closed">
+            <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg max-h-96 overflow-y-auto">
+                <h3 class="text-lg font-bold mb-2 text-gray-800">Storm Dates</h3>
+                <div id="storm-date-list" class="space-y-2"></div>
+            </div>
+            <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center">
+                <span>📅</span>
+                <span>Storm Dates</span>
+            </button>
+        </div>
+        <div id="address-list-panel-container" class="absolute top-0 right-0 h-full z-[1000] closed">
+             <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full w-64 sm:w-80 flex flex-col">
+                <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
+                <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0">
+                    <h4 class="font-semibold text-sm mb-2">Filter by Status</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label>
+                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label>
+                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label>
+                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label>
+                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label>
+                    </div>
+                </div>
+                <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
+                <button id="remove-selected-btn" class="w-full mt-2 px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition flex-shrink-0">Remove Selected</button>
+            </div>
+        </div>
+        <div id="legend-panel" class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden">
+            <h4 class="font-bold text-gray-800 mb-2">Selected Storms</h4>
+            <div id="legend-content" class="space-y-1"></div>
+        </div>
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-11/12 max-w-xs bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2">
+            <input type="range" id="cluster-slider" min="20" max="150" value="80" step="1" class="flex-grow">
             <div class="relative group">
-                <button id="upload-btn" class="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                </button>
-                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">
-                    Upload addresses from a file (.csv, .xlsx, .txt) or paste a list.
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Adjust marker clustering sensitivity.</div>
+            </div>
+        </div>
+        <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
+             <div class="bg-white p-8 rounded-lg shadow-xl text-center">
+                <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
+                <p class="text-gray-600 mb-6">This will remove all markers from the map.</p>
+                <div class="flex justify-center gap-4">
+                    <button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button>
+                    <button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
                 </div>
             </div>
         </div>
-        <button id="toggle-address-list-btn" class="px-4 py-1 bg-white text-gray-700 text-sm font-semibold rounded-full shadow-md hover:bg-gray-100 transition hidden">Manage Addresses</button>
-    </div>
-
-    <div id="top-right-controls" class="absolute top-20 sm:top-4 right-4 z-[1000] flex flex-col items-end gap-2">
-        <button id="remove-all-btn" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Markers</button>
-    </div>
-
-    <div id="storm-date-panel-container" class="absolute top-1/4 left-0 z-[1000] closed">
-        <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg max-h-96 overflow-y-auto">
-            <h3 class="text-lg font-bold mb-2 text-gray-800">Storm Dates</h3>
-            <div id="storm-date-list" class="space-y-2"></div>
-        </div>
-        <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center">
-            <span>📅</span>
-            <span>Storm Dates</span>
-        </button>
-    </div>
-    
-    <div id="address-list-panel-container" class="absolute top-0 right-0 h-full z-[1000] closed">
-        <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full w-64 sm:w-80 flex flex-col">
-            <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
-            <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0">
-                <h4 class="font-semibold text-sm mb-2">Filter by Status</h4>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label>
-                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label>
-                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label>
-                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label>
-                    <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label>
+        <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
+             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
+                <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label>
+                        <input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt">
+                    </div>
+                    <div class="text-center text-gray-500">OR</div>
+                    <div>
+                        <label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label>
+                        <textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
-            <button id="remove-selected-btn" class="w-full mt-2 px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition flex-shrink-0">Remove Selected</button>
-        </div>
-    </div>
-
-    <div id="legend-panel" class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden">
-        <h4 class="font-bold text-gray-800 mb-2">Selected Storms</h4>
-        <div id="legend-content" class="space-y-1"></div>
-    </div>
-    
-    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] w-11/12 max-w-xs bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2">
-        <input type="range" id="cluster-slider" min="20" max="150" value="80" step="1" class="flex-grow">
-        <div class="relative group">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-            <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                Adjust marker clustering sensitivity.
+                <div class="flex justify-end gap-4 mt-6">
+                    <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
+                    <button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl text-center">
-            <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
-            <p class="text-gray-600 mb-6">This will remove all markers from the map.</p>
-            <div class="flex justify-center gap-4">
-                <button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button>
-                <button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
-            <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label>
-                    <input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt">
-                </div>
-                <div class="text-center text-gray-500">OR</div>
-                <div>
-                    <label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label>
-                    <textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
-                </div>
-            </div>
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-                <button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button>
-            </div>
-        </div>
-    </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
+        // --- START: Firebase Configuration ---
+        // PASTE YOUR COPIED FIREBASE CONFIG OBJECT HERE
+        const firebaseConfig = {
+           // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
+  authDomain: "storm-inspector-weather-map.firebaseapp.com",
+  projectId: "storm-inspector-weather-map",
+  storageBucket: "storm-inspector-weather-map.firebasestorage.app",
+  messagingSenderId: "504681972954",
+  appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
+  measurementId: "G-H1413D9HN7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        };
+        // --- END: Firebase Configuration ---
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let currentUser = null;
+
+        // --- App Containers ---
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+
+        // --- Auth UI Elements ---
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const emailInput = document.getElementById('email-input');
+        const emailSigninBtn = document.getElementById('email-signin-btn');
+        const emailMessage = document.getElementById('email-message');
+        const userInfo = document.getElementById('user-info');
+        const userEmailSpan = document.getElementById('user-email');
+        const signoutBtn = document.getElementById('signout-btn');
+
+        // --- Auth Event Listeners ---
+        googleSigninBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error));
+        });
+
+        emailSigninBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            if (!email) {
+                alert("Please enter your email address.");
+                return;
+            }
+            const actionCodeSettings = {
+                url: window.location.href, // Redirect back to this same page
+                handleCodeInApp: true,
+            };
+
+            auth.sendSignInLinkToEmail(email, actionCodeSettings)
+                .then(() => {
+                    window.localStorage.setItem('emailForSignIn', email); // Save email locally
+                    emailMessage.textContent = "Login link sent! Please check your email.";
+                })
+                .catch(error => {
+                    console.error("Email Link Error:", error);
+                    emailMessage.textContent = "Error sending link. Please try again.";
+                });
+        });
+        
+        signoutBtn.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // --- Core Auth State Logic ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in.
+                currentUser = user;
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                
+                // For now, we still load from localStorage. We will change this next.
+                loadMarkersFromLocalStorage();
+
+            } else {
+                // User is signed out.
+                currentUser = null;
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                markers.clearLayers(); // Clear map data on logout
+                updateAddressRemovalList();
+            }
+        });
+
+        // Handle the email link sign-in on page load
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('Please provide your email for confirmation');
+            }
+            auth.signInWithEmailLink(email, window.location.href)
+                .then((result) => {
+                    window.localStorage.removeItem('emailForSignIn');
+                    // You can access the new user via result.user
+                })
+                .catch((error) => console.error(error));
+        }
+
+    </script>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <script>
+        // NOTE: The Firebase initialization and auth logic is now in the script block above this one.
+        // This script now contains only the map-related logic.
+
         // --- Map Initialization ---
         const map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -232,7 +353,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
         const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
         const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
-        // --- NEW: Data Persistence Functions ---
+        // --- Data Persistence Functions (We will replace these next) ---
         function saveMarkersToLocalStorage() {
             const markerData = [];
             markers.eachLayer(layer => {
@@ -251,12 +372,12 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             const savedData = localStorage.getItem('savedStormMarkers');
             if (savedData) {
                 const markerData = JSON.parse(savedData);
+                markers.clearLayers();
                 markerData.forEach(data => {
-                    // Pass the full saved data object to addMarker
                     addMarker(data.lat, data.lon, data.address, {
                         id: data.id,
                         inspectionStatus: data.inspectionStatus,
-                        shouldOpenPopup: false // Don't open popups on initial load
+                        shouldOpenPopup: false
                     });
                 });
             }
@@ -305,9 +426,8 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             }
         });
 
-        // --- Marker Management (MODIFIED) ---
+        // --- Marker Management ---
         function addMarker(lat, lon, name, options = {}) {
-            // Use saved ID and status if provided, otherwise create new ones
             const markerId = options.id || `marker-${Date.now()}`;
             const inspectionStatus = options.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
             const shouldOpenPopup = options.shouldOpenPopup !== false;
@@ -322,16 +442,13 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             marker.on('popupopen', () => populatePopup(markerId, marker.options.inspectionStatus));
 
             markers.addLayer(marker);
-            
-            // Set the correct icon on load
             updateMarkerIcon(marker);
             
             if (shouldOpenPopup) {
                 markers.zoomToShowLayer(marker, () => marker.openPopup());
             }
             
-            // Save state after adding a marker
-            saveMarkersToLocalStorage();
+            saveMarkersToLocalStorage(); // We will replace this soon
             updateAddressRemovalList();
         }
 
@@ -389,7 +506,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
                     damageRadios.forEach(radio => radio.disabled = !inspected);
                     
-                    saveMarkersToLocalStorage(); // Save changes
+                    saveMarkersToLocalStorage(); // Will be replaced
                     updateAddressRemovalList();
                 }
             });
@@ -415,7 +532,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     markers.removeLayer(layer);
                 }
             });
-            saveMarkersToLocalStorage(); // Save changes
+            saveMarkersToLocalStorage(); // Will be replaced
             updateAddressRemovalList();
         }
 
@@ -455,6 +572,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             } else {
                 toggleAddressListBtn.classList.add('hidden');
                 addressListPanelContainer.classList.add('closed');
+                addressListContent.innerHTML = ''; // Clear the list content
             }
         }
         
@@ -480,7 +598,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             legendPanel.classList.add('hidden');
             document.querySelectorAll('#storm-date-list input').forEach(cb => cb.checked = false);
             updateAddressRemovalList();
-            saveMarkersToLocalStorage(); // Save after clearing all
+            saveMarkersToLocalStorage(); // Will be replaced
             confirmationModal.classList.add('hidden');
         });
         cancelRemoveBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
@@ -562,7 +680,6 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     const data = await response.json();
                     if (data && data.length > 0) {
                         const { lat, lon, display_name } = data[0];
-                        // The main addMarker function will handle saving now
                         addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
                     } else {
                         console.warn(`Could not geocode address: ${address}`);
@@ -570,7 +687,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                 } catch (error) {
                     console.error(`Error geocoding ${address}:`, error);
                 }
-                await new Promise(resolve => setTimeout(resolve, 100)); // Rate limit
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
             statusIndicator.textContent = 'Done!';
             statusIndicator.classList.remove('bg-yellow-500');
@@ -582,9 +699,11 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
         }
 
         function createStatusIndicator() {
+            // Check if app container is visible before adding status indicator
+            if (appContainer.classList.contains('hidden')) return null;
             const indicator = document.createElement('div');
             indicator.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
-            document.getElementById('top-right-controls').prepend(indicator);
+            document.getElementById('top-right-controls').appendChild(indicator);
             return indicator;
         }
 
@@ -599,7 +718,6 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     return;
                 }
                 if (line.startsWith('summary') || header.length === 0) return;
-                
                 const values = line.split(',');
                 const point = header.reduce((obj, nextKey, index) => {
                     obj[nextKey] = values[index];
@@ -621,13 +739,10 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                     dailyMaxHail[date] = size;
                 }
             });
-
             const sortedDates = Object.entries(dailyMaxHail).sort((a, b) => new Date(b[0]) - new Date(a[0]));
-
             stormDateList.innerHTML = sortedDates.map(([date, size]) => `
                 <label class="flex items-center">
-                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-                           onchange="handleDateSelection()" value="${date}">
+                    <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" onchange="handleDateSelection()" value="${date}">
                     <span class="ml-2 text-gray-700">${date} (${size.toFixed(2)}" hail)</span>
                 </label>
             `).join('');
@@ -650,7 +765,6 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                 const color = stormColors[index % stormColors.length];
                 const pointsForDate = stormData.filter(p => p.ZTIME.startsWith(date) && parseFloat(p.MAXSIZE) > 0);
                 drawHailSwath(pointsForDate, color);
-                
                 const maxHail = Math.max(...pointsForDate.map(p => parseFloat(p.MAXSIZE)));
                 legendContent.innerHTML += `
                     <div class="flex items-center">
@@ -671,10 +785,8 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
                  });
                  return;
             };
-
             const turfPoints = pointsForDate.map(p => turf.point([parseFloat(p.LON), parseFloat(p.LAT)]));
             const hull = turf.convex(turf.featureCollection(turfPoints));
-
             if (hull) {
                 const buffer1 = turf.buffer(hull, 1, {units: 'miles'});
                 const buffer2 = turf.buffer(hull, 2, {units: 'miles'});
@@ -684,19 +796,12 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
             }
         }
 
-        toggleStormPanelBtn.addEventListener('click', () => {
-            stormDatePanelContainer.classList.toggle('closed');
-        });
+        toggleStormPanelBtn.addEventListener('click', () => stormDatePanelContainer.classList.toggle('closed'));
+        toggleAddressListBtn.addEventListener('click', () => addressListPanelContainer.classList.toggle('closed'));
         
-        toggleAddressListBtn.addEventListener('click', () => {
-            addressListPanelContainer.classList.toggle('closed');
-        });
-        
-        // --- Cluster Slider Logic ---
         clusterSlider.addEventListener('input', (e) => {
             const newRadius = parseInt(e.target.value, 10);
             const allMarkers = markers.getLayers();
-            
             map.removeLayer(markers);
             markers = L.markerClusterGroup({ maxClusterRadius: newRadius });
             markers.addLayers(allMarkers);
@@ -705,12 +810,10 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
         // --- Initial Load ---
         populateStormDatePanel();
-        loadMarkersFromLocalStorage(); // Load saved data when the app starts
-        
-        // Add event listeners to new filter checkboxes
         document.querySelectorAll('input[name="filter"]').forEach(cb => {
             cb.addEventListener('change', updateAddressRemovalList);
         });
+
     </script>
 </body>
 </html>
