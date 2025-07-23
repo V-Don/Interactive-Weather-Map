@@ -158,105 +158,115 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-       <script>
-   // --- START: Firebase Configuration ---
-// This is the correct format for our app (Firebase v8)
-const firebaseConfig = {
-    apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
-    authDomain: "storm-inspector-weather-map.firebaseapp.com",
-    projectId: "storm-inspector-weather-map",
-    storageBucket: "storm-inspector-weather-map.appspot.com",
-    messagingSenderId: "504681972954",
-    appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
-    measurementId: "G-H1413D9HN7"
-};
-// --- END: Firebase Configuration ---
+        // --- START: Firebase Configuration ---
+        //
+        //  PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        //
+        //  It should look like this:
+        //  const firebaseConfig = {
+        //      apiKey: "AIza...",
+        //      authDomain: "...",
+        //      ...etc
+        //  };
+        //
+        const firebaseConfig = {}; // <-- PASTE YOUR CONFIG OBJECT HERE
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    let currentUser = null;
+        // --- END: Firebase Configuration ---
 
-    // --- App Containers ---
-    const loginContainer = document.getElementById('login-container');
-    const appContainer = document.getElementById('app-container');
 
-    // --- Auth UI Elements ---
-    const googleSigninBtn = document.getElementById('google-signin-btn');
-    const emailInput = document.getElementById('email-input');
-    const emailSigninBtn = document.getElementById('email-signin-btn');
-    const emailMessage = document.getElementById('email-message');
-    const userInfo = document.getElementById('user-info');
-    const userEmailSpan = document.getElementById('user-email');
-    const signoutBtn = document.getElementById('signout-btn');
-
-    // --- Auth Event Listeners ---
-    googleSigninBtn.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error));
-    });
-
-    emailSigninBtn.addEventListener('click', () => {
-        const email = emailInput.value;
-        if (!email) {
-            alert("Please enter your email address.");
-            return;
-        }
-        const actionCodeSettings = {
-            url: window.location.href, // Redirect back to this same page
-            handleCodeInApp: true,
-        };
-
-        auth.sendSignInLinkToEmail(email, actionCodeSettings)
-            .then(() => {
-                window.localStorage.setItem('emailForSignIn', email); // Save email locally
-                emailMessage.textContent = "Login link sent! Please check your email.";
-            })
-            .catch(error => {
-                console.error("Email Link Error:", error);
-                emailMessage.textContent = "Error sending link. Please try again.";
-            });
-    });
-    
-    signoutBtn.addEventListener('click', () => {
-        auth.signOut();
-    });
-
-    // --- Core Auth State Logic ---
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            // User is signed in.
-            currentUser = user;
-            loginContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            userEmailSpan.textContent = user.email;
-            
-            // For now, we still load from localStorage. We will change this next.
-            loadMarkersFromLocalStorage();
-
+        // Initialize Firebase
+        if (firebaseConfig.apiKey) {
+            firebase.initializeApp(firebaseConfig);
         } else {
-            // User is signed out.
-            currentUser = null;
-            loginContainer.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-            markers.clearLayers(); // Clear map data on logout
-            updateAddressRemovalList();
+            document.getElementById('login-container').innerHTML = '<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg text-center"><h2 class="text-2xl font-bold text-red-600">Firebase Not Configured</h2><p class="mt-2 text-gray-600">You must add your Firebase configuration object to the index.html file to enable login.</p></div>';
         }
-    });
 
-    // Handle the email link sign-in on page load
-    if (auth.isSignInWithEmailLink(window.location.href)) {
-        let email = window.localStorage.getItem('emailForSignIn');
-        if (!email) {
-            email = window.prompt('Please provide your email for confirmation');
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let currentUser = null;
+
+        // --- App Containers ---
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+
+        // --- Auth UI Elements ---
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const emailInput = document.getElementById('email-input');
+        const emailSigninBtn = document.getElementById('email-signin-btn');
+        const emailMessage = document.getElementById('email-message');
+        const userInfo = document.getElementById('user-info');
+        const userEmailSpan = document.getElementById('user-email');
+        const signoutBtn = document.getElementById('signout-btn');
+
+        // --- Auth Event Listeners ---
+        googleSigninBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error));
+        });
+
+        emailSigninBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            if (!email) {
+                alert("Please enter your email address.");
+                return;
+            }
+            const actionCodeSettings = {
+                url: window.location.href,
+                handleCodeInApp: true,
+            };
+
+            auth.sendSignInLinkToEmail(email, actionCodeSettings)
+                .then(() => {
+                    window.localStorage.setItem('emailForSignIn', email);
+                    emailMessage.textContent = "Login link sent! Please check your email.";
+                })
+                .catch(error => {
+                    console.error("Email Link Error:", error);
+                    emailMessage.textContent = "Error sending link. Please try again.";
+                });
+        });
+        
+        signoutBtn.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // --- Core Auth State Logic ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in.
+                currentUser = user;
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                
+                // For now, we still load from localStorage. We will change this next.
+                loadMarkersFromLocalStorage();
+
+            } else {
+                // User is signed out.
+                currentUser = null;
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                if (markers) {
+                    markers.clearLayers();
+                    updateAddressRemovalList();
+                }
+            }
+        });
+
+        // Handle the email link sign-in on page load
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('Please provide your email for confirmation');
+            }
+            auth.signInWithEmailLink(email, window.location.href)
+                .then((result) => {
+                    window.localStorage.removeItem('emailForSignIn');
+                })
+                .catch((error) => console.error(error));
         }
-        auth.signInWithEmailLink(email, window.location.href)
-            .then((result) => {
-                window.localStorage.removeItem('emailForSignIn');
-            })
-            .catch((error) => console.error(error));
-    }
+
     </script>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -265,7 +275,7 @@ const firebaseConfig = {
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     
     <script>
-        // NOTE: The Firebase initialization and auth logic is now in the script block above this one.
+        // NOTE: The Firebase initialization and auth logic is in the script block above this one.
         // This script now contains only the map-related logic.
 
         // --- Map Initialization ---
@@ -656,6 +666,7 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
 
         async function processAddressList(addresses) {
             const statusIndicator = createStatusIndicator();
+            if (!statusIndicator) return;
             for (let i = 0; i < addresses.length; i++) {
                 const address = addresses[i];
                 statusIndicator.textContent = `Loading Address ${i + 1} of ${addresses.length}...`;
@@ -684,7 +695,6 @@ ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON
         }
 
         function createStatusIndicator() {
-            // Check if app container is visible before adding status indicator
             if (appContainer.classList.contains('hidden')) return null;
             const indicator = document.createElement('div');
             indicator.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
