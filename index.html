@@ -24,15 +24,13 @@
         .popup-button-remove:hover { background-color: #dc2626; }
         .leaflet-top, .leaflet-bottom { z-index: 1000; }
         #storm-date-panel-container, #address-list-panel-container, #cluster-slider-container, #top-right-controls { 
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, right 0.3s ease-in-out;
         }
         #storm-date-panel-container.closed { transform: translateX(-100%); }
         
-        /* Mobile (default) - slide up from bottom */
         #address-list-panel-container.closed { 
             transform: translateY(100%);
         }
-        /* Desktop (sm and up) - override to slide in from right */
         @media (min-width: 640px) {
             #address-list-panel-container.closed {
                 transform: translateX(100%) translateY(0);
@@ -541,11 +539,10 @@
             toggleAddressListBtn.classList.toggle('text-gray-700', !isOpening);
             toggleAddressListBtn.classList.toggle('bg-red-600', isOpening);
             toggleAddressListBtn.classList.toggle('text-white', isOpening);
-            
             if (window.innerWidth < 640) { // Mobile
                 slider.style.transform = isOpening ? 'translateY(calc(-60vh + 2rem))' : 'translateY(0)';
             } else { // Desktop
-                topRightControls.style.transform = isOpening ? 'translateX(-20rem)' : 'translateX(0)'; // 20rem = w-80
+                topRightControls.style.right = isOpening ? '21rem' : '1rem'; // 20rem panel width (w-80) + 1rem original spacing (right-4)
             }
         });
         document.getElementById('cluster-slider').addEventListener('input', (e) => {
@@ -582,7 +579,7 @@
         async function processAddressList(a) {
             const sI = createStatusIndicator(); if (!sI) return;
             for(let i=0; i<a.length; i++){ sI.textContent=`Loading Address ${i+1} of ${a.length}...`; try { const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`; const r=await fetch(url); const d=await r.json(); if(d&&d.length>0){const{lat,lon,display_name}=d[0]; addMarker(parseFloat(lat),parseFloat(lon),display_name,{shouldOpenPopup:false});} else console.warn(`Could not geocode: ${a[i]}`); } catch(e) { console.error(`Error geocoding ${a[i]}:`,e); } await new Promise(res=>setTimeout(res,100)); }
-            sI.textContent='Done!'; sI.classList.remove('bg-yellow-500'); sI.classList.add('bg-green-500'); setTimeout(()=>sI.remove(),3000); if(markers.getLayers().length>0) map.fitBounds(markers.getBounds(),{padding:[50,50]});
+            sI.textContent='Done!'; sI.classList.remove('bg-yellow-500'); sI.classList.add('bg-green-500'); setTimeout(()=>sI.remove(),3000); if(markers.getLayers().length > 0) map.fitBounds(markers.getBounds(),{padding:[50,50]});
         }
         function createStatusIndicator() { if (appContainer.classList.contains('hidden')) return null; const i=document.createElement('div'); i.className='px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all'; document.getElementById('top-right-controls').appendChild(i); return i; }
         
