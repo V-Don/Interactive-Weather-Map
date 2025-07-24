@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     
-    <script src="https://cdn/tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     
    <style>
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
@@ -23,12 +23,11 @@
         }
         .popup-button-remove:hover { background-color: #dc2626; }
         .leaflet-top, .leaflet-bottom { z-index: 1000; }
-        #storm-date-panel-container { transition: transform 0.3s ease-in-out; }
-        #storm-date-panel-container.closed { transform: translateX(-100%); }
-        
-        #address-list-panel-container, #cluster-slider-container { 
+        #storm-date-panel-container, #address-list-panel-container, #cluster-slider-container, #top-right-controls { 
             transition: transform 0.3s ease-in-out;
         }
+        #storm-date-panel-container.closed { transform: translateX(-100%); }
+        
         /* Mobile (default) - slide up from bottom */
         #address-list-panel-container.closed { 
             transform: translateY(100%);
@@ -54,17 +53,14 @@
         <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1>
             <p class="text-gray-500 mb-6">Sign in to access your map</p>
-            
             <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors mb-4">
                 <svg class="h-6 w-6" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
                 <span class="text-gray-700 font-semibold">Sign in with Google</span>
             </button>
-            
             <div class="relative my-4">
                 <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
                 <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or with email</span></div>
             </div>
-            
             <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition mb-3">
             <button id="email-signin-btn" class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Send Login Link</button>
             <p id="email-message" class="text-green-600 text-sm mt-3 h-4"></p>
@@ -73,7 +69,6 @@
     
     <div id="app-container" class="h-full w-full hidden">
         <div id="map"></div>
-        
         <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl flex flex-col items-center gap-2">
             <div class="w-full flex items-center gap-2">
                 <div class="relative flex-grow">
@@ -84,13 +79,10 @@
                     <button id="upload-btn-desktop" class="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     </button>
-                    <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">
-                        Upload addresses from a file (.csv, .xlsx, .txt) or paste a list.
-                    </div>
+                    <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">Upload addresses from a file.</div>
                 </div>
             </div>
         </div>
-
         <div id="top-right-controls" class="absolute top-20 sm:top-4 right-4 z-[1000] flex flex-col items-end gap-2">
             <div id="user-info" class="flex items-center gap-3 bg-white/90 p-2 rounded-full shadow-md">
                <span id="user-email" class="text-sm font-medium text-gray-700 hidden sm:block"></span>
@@ -102,7 +94,6 @@
            </button>
            <button id="toggle-address-list-btn" class="hidden px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-100 transition">Manage Addresses</button>
         </div>
-        
         <div id="storm-date-panel-container" class="absolute top-1/4 left-0 z-[1000] closed">
             <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg w-72">
                 <div id="storm-list-view">
@@ -115,52 +106,21 @@
                         <h3 class="text-lg font-bold text-gray-800">Input Data</h3>
                         <button id="back-to-list-view-btn" class="text-sm font-semibold text-blue-600 hover:underline">Back</button>
                     </div>
-                    <div class="mt-2">
-                        <label for="file-type" class="text-sm font-medium text-gray-700">File Type:</label>
-                        <select id="file-type" name="file-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                            <option selected>CSV</option>
-                            <option disabled>JSON</option>
-                            <option disabled>KMZ</option>
-                            <option disabled>XML</option>
-                        </select>
-                    </div>
-                    <div class="mt-3">
-                         <label for="storm-file-upload" class="w-full text-center block px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-gray-700 transition cursor-pointer">
-                            Upload File
-                        </label>
-                        <input type="file" id="storm-file-upload" class="hidden" accept=".csv,.txt">
-                    </div>
-                    <div class="relative my-4">
-                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
-                        <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">OR</span></div>
-                    </div>
-                    <p class="text-xs text-gray-600 mb-2">
-                        <a href="https://www.ncei.noaa.gov/maps/swdi/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">Open NOAA Map</a> and paste CSV below.
-                    </p>
+                    <div class="mt-2"><label for="file-type" class="text-sm font-medium text-gray-700">File Type:</label><select id="file-type" name="file-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option selected>CSV</option><option disabled>JSON</option><option disabled>KMZ</option><option disabled>XML</option></select></div>
+                    <div class="mt-3"><label for="storm-file-upload" class="w-full text-center block px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-gray-700 transition cursor-pointer">Upload File</label><input type="file" id="storm-file-upload" class="hidden" accept=".csv,.txt"></div>
+                    <div class="relative my-4"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">OR</span></div></div>
+                    <p class="text-xs text-gray-600 mb-2"><a href="https://www.ncei.noaa.gov/maps/swdi/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">Open NOAA Map</a> and paste CSV below.</p>
                     <textarea id="storm-data-textarea" class="w-full h-24 p-2 border border-gray-300 rounded-md text-xs" placeholder="Paste CSV data here..."></textarea>
                     <button id="process-storm-data-btn" class="w-full mt-3 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-green-700 transition">Add Pasted Data</button>
                 </div>
             </div>
-            <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center">
-                <span>📅</span>
-                <span>Storm Dates</span>
-            </button>
+            <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center"><span>📅</span><span>Storm Dates</span></button>
         </div>
-
         <div id="address-list-panel-container" class="absolute bottom-0 left-0 w-full h-auto max-h-[60vh] rounded-t-lg z-[1000] closed sm:top-0 sm:right-0 sm:left-auto sm:bottom-auto sm:w-80 sm:h-full sm:max-h-full sm:rounded-none">
            <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full flex flex-col rounded-t-lg sm:rounded-none">
                 <div class="sm:hidden w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 flex-shrink-0"></div>
                 <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
-                <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0">
-                    <h4 class="font-semibold text-sm mb-2">Filter by Status</h4>
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label>
-                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label>
-                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label>
-                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label>
-                        <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label>
-                    </div>
-                </div>
+                <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0"><h4 class="font-semibold text-sm mb-2">Filter by Status</h4><div class="grid grid-cols-2 gap-2 text-sm"><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label></div></div>
                 <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
                 <div class="mt-2 pt-2 border-t flex-shrink-0 space-y-2">
                     <button id="remove-selected-btn" class="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition">Remove Selected</button>
@@ -168,22 +128,17 @@
                 </div>
             </div>
         </div>
-
         <div id="legend-panel" class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden">
             <h4 class="font-bold text-gray-800 mb-2">Selected Storms</h4>
             <div id="legend-content" class="space-y-1"></div>
         </div>
-
         <div id="cluster-slider-container" class="absolute bottom-4 left-4 z-[1000] w-1/3 max-w-[200px] bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2">
             <input type="range" id="cluster-slider" min="20" max="150" value="80" step="1" class="flex-grow">
             <div class="relative group">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    Adjust clustering.
-                </div>
+                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Adjust clustering.</div>
             </div>
         </div>
-        
         <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
              <div class="bg-white p-8 rounded-lg shadow-xl text-center">
                 <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
@@ -198,15 +153,9 @@
              <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
                 <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label>
-                        <input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt">
-                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div>
                     <div class="text-center text-gray-500">OR</div>
-                    <div>
-                        <label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label>
-                        <textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea>
-                    </div>
+                    <div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div>
                 </div>
                 <div class="flex justify-end gap-4 mt-6">
                     <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
@@ -219,7 +168,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -478,11 +426,11 @@
                 review: document.querySelector('input[name="filter"][value="review"]')?.checked,
             };
             const filteredLayers = layers.filter(l => {
-                const status = l.options.inspectionStatus;
-                const inspectedFilter = (filters.inspected && status.inspected) || (filters.not_inspected && !status.inspected) || (!filters.inspected && !filters.not_inspected);
-                if (!inspectedFilter) return false;
-                const damageFilters = ['damaged', 'no_damage', 'review'].filter(v => filters[v]);
-                if (damageFilters.length > 0 && !damageFilters.includes(s.damage)) return false;
+                const s = l.options.inspectionStatus;
+                const iF = (filters.inspected && s.inspected) || (filters.not_inspected && !s.inspected) || (!filters.inspected && !filters.not_inspected);
+                if (!iF) return false;
+                const dF = ['damaged', 'no_damage', 'review'].filter(v => filters[v]);
+                if (dF.length > 0 && !dF.includes(s.damage)) return false;
                 return true;
             });
             if (layers.length > 0) {
@@ -586,14 +534,18 @@
         toggleAddressListBtn.addEventListener('click', () => {
             const panel = document.getElementById('address-list-panel-container');
             const slider = document.getElementById('cluster-slider-container');
+            const topRightControls = document.getElementById('top-right-controls');
             const isOpening = panel.classList.contains('closed');
             panel.classList.toggle('closed');
             toggleAddressListBtn.classList.toggle('bg-white', !isOpening);
             toggleAddressListBtn.classList.toggle('text-gray-700', !isOpening);
             toggleAddressListBtn.classList.toggle('bg-red-600', isOpening);
             toggleAddressListBtn.classList.toggle('text-white', isOpening);
-            if (window.innerWidth < 640) { // Only move slider on mobile
+            
+            if (window.innerWidth < 640) { // Mobile
                 slider.style.transform = isOpening ? 'translateY(calc(-60vh + 2rem))' : 'translateY(0)';
+            } else { // Desktop
+                topRightControls.style.transform = isOpening ? 'translateX(-20rem)' : 'translateX(0)'; // 20rem = w-80
             }
         });
         document.getElementById('cluster-slider').addEventListener('input', (e) => {
