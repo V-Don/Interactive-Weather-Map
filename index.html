@@ -50,7 +50,7 @@
 </head>
 <body>
 
-    <div id="login-container" class="h-full w-full flex items-center justify-center bg-gray-100">
+    <div id="login-container" class="absolute inset-0 z-[3000] flex items-center justify-center bg-gray-100">
         <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1>
             <p class="text-gray-500 mb-6">Sign in to access your map</p>
@@ -322,7 +322,7 @@
         const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
         const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
-        // --- NEW: Firestore Data Functions ---
+        // --- Firestore Data Functions ---
         async function loadMarkersFromFirestore() {
             if (!currentUser) return;
             markers.clearLayers();
@@ -334,29 +334,23 @@
                         id: markerData.id,
                         inspectionStatus: markerData.inspectionStatus,
                         shouldOpenPopup: false,
-                        source: 'firestore' // Prevents re-saving
+                        source: 'firestore'
                     });
                 });
-            } catch (error) {
-                console.error("Error loading markers from Firestore:", error);
-            }
+            } catch (error) { console.error("Error loading markers from Firestore:", error); }
             updateAddressRemovalList();
         }
         async function saveMarkerToFirestore(markerData) {
             if (!currentUser) return;
             try {
                 await db.collection('users').doc(currentUser.uid).collection('markers').doc(markerData.id).set(markerData);
-            } catch (error) {
-                console.error("Error saving marker to Firestore:", error);
-            }
+            } catch (error) { console.error("Error saving marker to Firestore:", error); }
         }
         async function removeMarkerFromFirestore(markerId) {
             if (!currentUser) return;
             try {
                 await db.collection('users').doc(currentUser.uid).collection('markers').doc(markerId).delete();
-            } catch (error) {
-                console.error("Error removing marker from Firestore:", error);
-            }
+            } catch (error) { console.error("Error removing marker from Firestore:", error); }
         }
         async function removeAllMarkersFromFirestore() {
             if (!currentUser) return;
@@ -404,7 +398,7 @@
             }
         });
 
-        // --- Marker Management & UI Logic (MODIFIED) ---
+        // --- Marker Management & UI Logic ---
         function addMarker(lat, lon, name, options = {}) {
             const markerId = options.id || `marker-${Date.now()}`;
             const inspectionStatus = options.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
@@ -415,12 +409,23 @@
             markers.addLayer(marker);
             updateMarkerIcon(marker);
             if (shouldOpenPopup) markers.zoomToShowLayer(marker, () => marker.openPopup());
-            
             if (options.source !== 'firestore') {
                 const markerData = { lat, lon, id: markerId, address: name, inspectionStatus };
                 saveMarkerToFirestore(markerData);
             }
             updateAddressRemovalList();
+        }
+        function createPopupContent(markerId, name) {
+            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${markerId}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${markerId}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${markerId}" class="space-y-1 pl-4"><label><input type="radio" name="damage-${markerId}" value="damaged" onchange="updateMarkerStatus('${markerId}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${markerId}" value="no_damage" onchange="updateMarkerStatus('${markerId}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${markerId}" value="review" onchange="updateMarkerStatus('${markerId}')" disabled> Further Review</label></div><div><label for="photo-link-${markerId}" class="text-sm font-medium">Link to Photos</label><input type="text" id="photo-link-${markerId}" class="w-full p-1 border border-gray-300 rounded-md mt-1" oninput="updateMarkerStatus('${markerId}')"></div><button class="popup-button-remove" onclick="removeMarker('${markerId}')">Remove</button></div>`;
+        }
+        function populatePopup(markerId, status) {
+            document.getElementById(`inspected-${markerId}`).checked = status.inspected;
+            document.getElementById(`photo-link-${markerId}`).value = status.photoLink;
+            const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
+            damageRadios.forEach(radio => {
+                radio.disabled = !status.inspected;
+                if (radio.value === status.damage) radio.checked = true;
+            });
         }
         window.updateMarkerStatus = function(markerId) {
             markers.eachLayer(layer => {
@@ -447,25 +452,6 @@
                 }
             });
         }
-        window.removeMarker = function(markerId) {
-            markers.eachLayer(layer => {
-                if (layer.options.id === markerId) markers.removeLayer(layer);
-            });
-            removeMarkerFromFirestore(markerId);
-            updateAddressRemovalList();
-        }
-        function createPopupContent(markerId, name) {
-            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${markerId}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${markerId}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${markerId}" class="space-y-1 pl-4"><label><input type="radio" name="damage-${markerId}" value="damaged" onchange="updateMarkerStatus('${markerId}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${markerId}" value="no_damage" onchange="updateMarkerStatus('${markerId}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${markerId}" value="review" onchange="updateMarkerStatus('${markerId}')" disabled> Further Review</label></div><div><label for="photo-link-${markerId}" class="text-sm font-medium">Link to Photos</label><input type="text" id="photo-link-${markerId}" class="w-full p-1 border border-gray-300 rounded-md mt-1" oninput="updateMarkerStatus('${markerId}')"></div><button class="popup-button-remove" onclick="removeMarker('${markerId}')">Remove</button></div>`;
-        }
-        function populatePopup(markerId, status) {
-            document.getElementById(`inspected-${markerId}`).checked = status.inspected;
-            document.getElementById(`photo-link-${markerId}`).value = status.photoLink;
-            const damageRadios = document.querySelectorAll(`input[name="damage-${markerId}"]`);
-            damageRadios.forEach(radio => {
-                radio.disabled = !status.inspected;
-                if (radio.value === status.damage) radio.checked = true;
-            });
-        }
         function updateMarkerIcon(marker) {
             const status = marker.options.inspectionStatus;
             if (!status.inspected) marker.setIcon(blueIcon);
@@ -477,6 +463,13 @@
                     default: marker.setIcon(blueIcon);
                 }
             }
+        }
+        window.removeMarker = function(markerId) {
+            markers.eachLayer(layer => {
+                if (layer.options.id === markerId) markers.removeLayer(layer);
+            });
+            removeMarkerFromFirestore(markerId);
+            updateAddressRemovalList();
         }
         function updateAddressRemovalList() {
             const layers = markers.getLayers();
@@ -642,11 +635,85 @@
         });
 
         // --- Mass Upload Logic ---
-        async function handleUpload() { /* ... */ }
-        function showTemporaryMessage(message) { /* ... */ }
-        function parseFile(file) { /* ... */ }
-        async function processAddressList(addresses) { /* ... */ }
-        function createStatusIndicator() { /* ... */ }
+        async function handleUpload() {
+             const fileUploadInput = document.getElementById('file-upload');
+            const textUploadArea = document.getElementById('text-upload');
+            const file = fileUploadInput.files[0];
+            const text = textUploadArea.value;
+            let addresses = [];
+
+            if (file) addresses = await parseFile(file);
+            else if (text.trim()) addresses = text.trim().split('\n').filter(line => line.trim() !== '');
+
+            if (addresses.length === 0) return alert("No addresses found to upload.");
+
+            document.getElementById('upload-modal').classList.add('hidden');
+            fileUploadInput.value = '';
+            textUploadArea.value = '';
+            
+            showTemporaryMessage("System Loading Addresses...");
+            await processAddressList(addresses);
+        }
+        function showTemporaryMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            setTimeout(() => {
+                messageDiv.classList.add('opacity-0');
+                setTimeout(() => messageDiv.remove(), 500);
+            }, 6000);
+        }
+        function parseFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+                        resolve(content.trim().split('\n').filter(line => line.trim() !== ''));
+                    } else if (file.name.endsWith('.xlsx')) {
+                        const workbook = XLSX.read(content, { type: 'binary' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        resolve(json.map(row => row[0]).filter(addr => addr));
+                    } else {
+                        reject(new Error("Unsupported file type."));
+                    }
+                };
+                reader.onerror = (err) => reject(err);
+                reader.readAsBinaryString(file);
+            });
+        }
+        async function processAddressList(addresses) {
+            const statusIndicator = createStatusIndicator();
+            if (!statusIndicator) return;
+            for (let i = 0; i < addresses.length; i++) {
+                statusIndicator.textContent = `Loading Address ${i + 1} of ${addresses.length}...`;
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addresses[i])}&countrycodes=us&limit=1`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        const { lat, lon, display_name } = data[0];
+                        addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
+                    } else console.warn(`Could not geocode address: ${addresses[i]}`);
+                } catch (error) { console.error(`Error geocoding ${addresses[i]}:`, error); }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            statusIndicator.textContent = 'Done!';
+            statusIndicator.classList.remove('bg-yellow-500');
+            statusIndicator.classList.add('bg-green-500');
+            setTimeout(() => statusIndicator.remove(), 3000);
+            if (markers.getLayers().length > 0) map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }
+        function createStatusIndicator() {
+            if (appContainer.classList.contains('hidden')) return null;
+            const indicator = document.createElement('div');
+            indicator.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
+            document.getElementById('top-right-controls').appendChild(indicator);
+            return indicator;
+        }
         
         // --- Initial App Load ---
         function runOnLoad() {
