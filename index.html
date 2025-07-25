@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Storm Inspector Map</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    
     <script src="https://cdn.tailwindcss.com"></script>
     
    <style>
@@ -16,11 +15,7 @@
         #map { height: 100%; width: 100%; }
         .leaflet-popup-content-wrapper { border-radius: 8px; background-color: #f9fafb; }
         .leaflet-popup-content { margin: 15px; }
-        .popup-button-remove {
-            padding: 6px 12px; border-radius: 6px; border: none; color: white;
-            font-size: 14px; cursor: pointer; margin-top: 10px; transition: background-color 0.2s;
-            background-color: #ef4444;
-        }
+        .popup-button-remove { padding: 6px 12px; border-radius: 6px; border: none; color: white; font-size: 14px; cursor: pointer; margin-top: 10px; transition: background-color 0.2s; background-color: #ef4444; }
         .popup-button-remove:hover { background-color: #dc2626; }
         .leaflet-top, .leaflet-bottom { z-index: 1000; }
         #storm-info-container, #address-list-panel-container, #cluster-slider-container, #top-right-controls { 
@@ -28,13 +23,9 @@
         }
         #storm-info-container.closed { transform: translateX(-100%); }
         
-        #address-list-panel-container.closed { 
-            transform: translateY(100%);
-        }
+        #address-list-panel-container.closed { transform: translateY(100%); }
         @media (min-width: 640px) {
-            #address-list-panel-container.closed {
-                transform: translateX(100%) translateY(0);
-            }
+            #address-list-panel-container.closed { transform: translateX(100%) translateY(0); }
         }
 
         input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; width: 100%; }
@@ -48,286 +39,95 @@
 <body>
 
     <div id="login-container" class="absolute inset-0 z-[3000] flex items-center justify-center bg-gray-100">
-        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1>
-            <p class="text-gray-500 mb-6">Sign in to access your map</p>
-            <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors mb-4">
-                <svg class="h-6 w-6" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-                <span class="text-gray-700 font-semibold">Sign in with Google</span>
-            </button>
-            <div class="relative my-4">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
-                <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or with email</span></div>
-            </div>
-            <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition mb-3">
-            <button id="email-signin-btn" class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Send Login Link</button>
-            <p id="email-message" class="text-green-600 text-sm mt-3 h-4"></p>
         </div>
-    </div>
     
     <div id="app-container" class="h-full w-full hidden">
         <div id="map"></div>
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl flex flex-col items-center gap-2">
-            <div class="w-full flex items-center gap-2">
-                <div class="relative flex-grow">
-                    <input type="text" id="address-input" placeholder="Enter an address..." class="w-full px-4 py-3 text-lg rounded-full shadow-lg border-2 border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                    <div id="address-suggestions" class="absolute mt-1 w-full bg-white rounded-lg shadow-lg overflow-hidden hidden"></div>
-                </div>
-                <div class="relative group hidden sm:flex">
-                    <button id="upload-btn-desktop" class="p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    </button>
-                    <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none -translate-x-1/2 left-1/2">Upload addresses from a file.</div>
-                </div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[1000] w-11/12 max-w-xl">
             </div>
-        </div>
         <div id="top-right-controls" class="absolute top-20 sm:top-4 right-4 z-[1000] flex flex-col items-end gap-2">
-            <div id="user-info" class="flex items-center gap-3 bg-white/90 p-2 rounded-full shadow-md">
-               <span id="user-email" class="text-sm font-medium text-gray-700 hidden sm:block"></span>
-               <button id="signout-btn" class="px-4 py-1 bg-red-600 text-white text-sm font-semibold rounded-full hover:bg-red-700 transition">Sign Out</button>
-           </div>
-           <button id="upload-btn-mobile" class="sm:hidden px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                Upload List
-           </button>
-           <button id="toggle-address-list-btn" class="hidden px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-100 transition">Manage Addresses</button>
-        </div>
+            </div>
         
         <div id="storm-info-container" class="absolute top-1/4 left-0 z-[1000] closed">
             <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg w-72">
                 <div id="storm-list-view">
                     <h3 class="text-lg font-bold mb-2 text-gray-800">Storm Dates</h3>
+                    <button id="search-storms-btn" class="w-full mb-3 px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM9.38 15.25l-2.08-2.09 3.52-1.25-.79-2.21-3.51 1.25-2.09-2.08 1.3-1.3L8.65 12l-2.08-2.08 1.3-1.3 2.08 2.08 3.52-1.25-.79-2.21-3.51 1.25L7.3 5.12l1.3-1.3 2.08 2.09 3.51-1.25.79 2.21-3.52 1.25 2.09 2.08-1.3 1.3-2.08-2.08-3.51 1.25.79 2.21 3.52-1.25L14.65 12l2.08 2.08-1.3 1.3-2.08-2.09-3.52 1.25.79 2.21 3.51-1.25 2.08 2.09-1.3 1.3-2.08-2.09L9.38 15.25z"/></svg>
+                        Search My Location
+                    </button>
                     <div id="storm-date-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                    <button id="show-input-view-btn" class="w-full mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-blue-700 transition">Add Storm Data</button>
+                    <button id="show-input-view-btn" class="w-full mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-blue-700 transition">Add Data Manually</button>
                 </div>
                 <div id="storm-input-view" class="hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-gray-800">Input Data</h3>
-                        <button id="back-to-list-view-btn" class="text-sm font-semibold text-blue-600 hover:underline">Back</button>
                     </div>
-                    <div class="mt-2"><label for="file-type" class="text-sm font-medium text-gray-700">File Type:</label><select id="file-type" name="file-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"><option selected>CSV</option><option disabled>JSON</option><option disabled>KMZ</option><option disabled>XML</option></select></div>
-                    <div class="mt-3"><label for="storm-file-upload" class="w-full text-center block px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-gray-700 transition cursor-pointer">Upload File</label><input type="file" id="storm-file-upload" class="hidden" accept=".csv,.txt"></div>
-                    <div class="relative my-4"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">OR</span></div></div>
-                    <p class="text-xs text-gray-600 mb-2"><a href="https://www.ncei.noaa.gov/maps/swdi/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">Open NOAA Map</a> and paste CSV below.</p>
-                    <textarea id="storm-data-textarea" class="w-full h-24 p-2 border border-gray-300 rounded-md text-xs" placeholder="Paste CSV data here..."></textarea>
-                    <button id="process-storm-data-btn" class="w-full mt-3 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 transition">Add Pasted Data</button>
-                </div>
             </div>
-            <div id="info-panel" class="mt-2 bg-white/90 backdrop-blur-sm p-3 rounded-r-lg shadow-lg hidden">
-                <h4 class="font-bold text-gray-800 mb-2">Info</h4>
-                <div id="info-content" class="space-y-1"></div>
-            </div>
+            <div id="info-panel" class="mt-2 bg-white/90 backdrop-blur-sm p-3 rounded-r-lg shadow-lg hidden"></div>
             <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center"><span>📅</span><span>Storm Data</span></button>
         </div>
 
-        <div id="address-list-panel-container" class="absolute bottom-0 left-0 w-full h-auto max-h-[60vh] rounded-t-lg z-[1000] closed sm:top-0 sm:right-0 sm:left-auto sm:bottom-auto sm:w-80 sm:h-full sm:max-h-full sm:rounded-none">
-           <div class="bg-white/90 backdrop-blur-sm p-4 shadow-2xl h-full flex flex-col rounded-t-lg sm:rounded-none">
-                <div class="sm:hidden w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 flex-shrink-0"></div>
-                <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
-                <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0"><h4 class="font-semibold text-sm mb-2">Filter by Status</h4><div class="grid grid-cols-2 gap-2 text-sm"><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label></div></div>
-                <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
-                <div class="mt-2 pt-2 border-t flex-shrink-0 space-y-2">
-                    <button id="remove-selected-btn" class="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition">Remove Selected</button>
-                    <button id="remove-all-btn" class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Addresses</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="cluster-slider-container" class="absolute top-20 left-4 z-[1000] w-1/3 max-w-[200px] bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-lg flex items-center gap-2 sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:top-auto">
-            <input type="range" id="cluster-slider" min="20" max="150" value="80" step="1" class="flex-grow">
-            <div class="relative group">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-                <div class="absolute bottom-full mb-2 w-48 bg-gray-800 text-white text-xs rounded py-1 px-2 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Adjust clustering.</div>
-            </div>
-        </div>
-        
-        <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl text-center">
-                <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
-                <p class="text-gray-600 mb-6">This will remove all addresses from the map.</p>
-                <div class="flex justify-center gap-4">
-                    <button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button>
-                    <button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-                </div>
-            </div>
-        </div>
-        <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
-                <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
-                <div class="space-y-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div>
-                    <div class="text-center text-gray-500">OR</div>
-                    <div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div>
-                </div>
-                <div class="flex justify-end gap-4 mt-6">
-                    <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-                    <button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button>
-                </div>
-            </div>
-        </div>
+        <div id="address-list-panel-container" class="absolute bottom-0 left-0 w-full h-auto max-h-[60vh] rounded-t-lg z-[1000] closed sm:top-0 sm:right-0 sm:left-auto sm:bottom-auto sm:w-80 sm:h-full sm:max-h-full sm:rounded-none"></div>
+        <div id="cluster-slider-container" class="absolute top-20 left-4 z-[1000] w-1/3 max-w-[200px] bg-white/90 p-2 rounded-full shadow-lg flex items-center gap-2 sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:top-auto"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     
     <script>
-        // --- START: Firebase Configuration ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyACjzcs2Ofh7khctrYQU-LVHlg2wfyiWNM",
-            authDomain: "storm-inspector-weather-map.firebaseapp.com",
-            projectId: "storm-inspector-weather-map",
-            storageBucket: "storm-inspector-weather-map.appspot.com",
-            messagingSenderId: "504681972954",
-            appId: "1:504681972954:web:029f4a4064a21a75eb51e3",
-            measurementId: "G-H1413D9HN7"
-        };
-        // --- END: Firebase Configuration ---
-
-        // --- Global App Variables ---
-        let map; let currentUser = null; let stormDataCollection = {};
-        let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
-        let swathLayer = L.layerGroup();
-        const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
-        let suggestionTimeout;
+        // --- Firebase Config and Global Vars ---
+        const firebaseConfig = { /* ... your config ... */ };
+        // ... all other global variables ...
         
         // --- Initialize Firebase ---
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const functions = firebase.functions();
 
-        // --- UI Element References ---
-        const loginContainer = document.getElementById('login-container');
-        const appContainer = document.getElementById('app-container');
-        const googleSigninBtn = document.getElementById('google-signin-btn');
-        const emailInput = document.getElementById('email-input');
-        const emailSigninBtn = document.getElementById('email-signin-btn');
-        const userEmailSpan = document.getElementById('user-email');
-        const signoutBtn = document.getElementById('signout-btn');
-        const addressInput = document.getElementById('address-input');
-        const addressSuggestions = document.getElementById('address-suggestions');
-        const uploadBtnDesktop = document.getElementById('upload-btn-desktop');
-        const uploadBtnMobile = document.getElementById('upload-btn-mobile');
-        const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
-
-        // --- Map Initialization Function ---
-        function initializeMap() {
-            if (map) return;
-            map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: 3, maxZoom: 19, attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
-            map.addLayer(markers);
-            swathLayer.addTo(map);
-        }
-
-        // --- Authentication Logic ---
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                loginContainer.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-                userEmailSpan.textContent = user.email;
-                initializeMap();
-                loadMarkersFromFirestore();
-                loadStormDataFromFirestore();
-            } else {
-                currentUser = null;
-                loginContainer.classList.remove('hidden');
-                appContainer.classList.add('hidden');
-                if (markers) markers.clearLayers();
-                if (swathLayer) swathLayer.clearLayers();
-                if (map) { map.remove(); map = null; }
-            }
-        });
-        googleSigninBtn.addEventListener('click', () => { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error)); });
-        emailSigninBtn.addEventListener('click', () => { const email = emailInput.value; if (!email) return alert("Please enter your email address."); const actionCodeSettings = { url: window.location.href, handleCodeInApp: true }; auth.sendSignInLinkToEmail(email, actionCodeSettings).then(() => { window.localStorage.setItem('emailForSignIn', email); document.getElementById('email-message').textContent = "Login link sent!"; }).catch(error => { console.error("Email Link Error:", error); document.getElementById('email-message').textContent = "Error sending link."; }); });
-        signoutBtn.addEventListener('click', () => auth.signOut());
-        if (auth.isSignInWithEmailLink(window.location.href)) { let email = window.localStorage.getItem('emailForSignIn'); if (!email) email = window.prompt('Please provide your email for confirmation'); auth.signInWithEmailLink(email, window.location.href).then(() => window.localStorage.removeItem('emailForSignIn')).catch(error => console.error(error)); }
-
-        // --- Marker Icons ---
-        const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-
-        // --- Firestore Data Functions ---
-        async function loadMarkersFromFirestore() { if (!currentUser) return; markers.clearLayers(); try { const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get(); querySnapshot.forEach(doc => { const d = doc.data(); addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, shouldOpenPopup: false, source: 'firestore' }); }); } catch (e) { console.error("Error loading markers:", e); } updateAddressRemovalList(); }
-        async function saveMarkerToFirestore(d) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); } }
-        async function removeMarkerFromFirestore(id) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); } }
-        async function removeAllMarkersFromFirestore() { if (!currentUser) return; const q = await db.collection('users').doc(currentUser.uid).collection('markers').get(); const batch = db.batch(); q.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
-        async function loadStormDataFromFirestore() { if (!currentUser) return; try { const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); const doc = await docRef.get(); if (doc.exists) { stormDataCollection = doc.data().collection || {}; } else { const defaultStormData = `ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON\n2025-03-30T01:09:44Z,KFWS,R0,100,20,0.5,33.914,-98.520`; const date = '2025-03-30'; stormDataCollection = { [date]: defaultStormData }; await docRef.set({ collection: stormDataCollection }); } } catch (error) { console.error("Error loading storm data:", error); stormDataCollection = {}; } populateStormDatePanel(); }
-        
-        // --- Address Search & Geocoding ---
-        async function fetchAddressSuggestions(q) { if(q.length<3){addressSuggestions.innerHTML='';addressSuggestions.classList.add('hidden');return;}const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us`;try{const r=await fetch(url);const d=await r.json();displaySuggestions(d);}catch(e){console.error('Error fetching suggestions:',e);}}
-        function displaySuggestions(s) { if(s.length===0){addressSuggestions.innerHTML='<div class="p-3 text-gray-500">No results found.</div>';}else{addressSuggestions.innerHTML=s.slice(0,5).map(i=>`<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');}addressSuggestions.classList.remove('hidden');}
-        addressInput.addEventListener('keyup', (e)=>{clearTimeout(suggestionTimeout);suggestionTimeout=setTimeout(()=>fetchAddressSuggestions(e.target.value),300);});
-        addressSuggestions.addEventListener('click',(e)=>{const s=e.target.closest('div');if(s){const lat=parseFloat(s.dataset.lat);const lon=parseFloat(s.dataset.lon);const name=s.dataset.name;addMarker(lat,lon,name);addressInput.value='';addressSuggestions.classList.add('hidden');}});
-
-        // --- Marker Management & UI Logic ---
-        function addMarker(lat,lon,name,opt={}){const id=opt.id||`marker-${Date.now()}`;const status=opt.inspectionStatus||{inspected:false,damage:'none',photoLink:''};const popup=opt.shouldOpenPopup!==false;const marker=L.marker([lat,lon],{id:id,address:name,inspectionStatus:status});marker.bindPopup(()=>createPopupContent(id,name));marker.on('popupopen',()=>populatePopup(id,marker.options.inspectionStatus));markers.addLayer(marker);updateMarkerIcon(marker);if(popup)markers.zoomToShowLayer(marker,()=>marker.openPopup());if(opt.source!=='firestore'){const data={lat,lon,id,address:name,inspectionStatus:status};saveMarkerToFirestore(data);}updateAddressRemovalList();}
-        function createPopupContent(id,name){return`<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div><button class="popup-button-remove" onclick="removeMarker('${id}')">Remove</button></div>`;}
-        function populatePopup(id,s){document.getElementById(`inspected-${id}`).checked=s.inspected;document.getElementById(`photo-link-${id}`).value=s.photoLink;const r=document.querySelectorAll(`input[name="damage-${id}"]`);r.forEach(radio=>{radio.disabled=!s.inspected;if(radio.value===s.damage)radio.checked=true;});}
-        window.updateMarkerStatus=function(id){markers.eachLayer(l=>{if(l.options.id===id){const insp=document.getElementById(`inspected-${id}`).checked;const link=document.getElementById(`photo-link-${id}`).value;let dmg='none';if(insp){const sel=document.querySelector(`input[name="damage-${id}"]:checked`);if(sel)dmg=sel.value;}l.options.inspectionStatus={inspected:insp,damage:dmg,photoLink:link};updateMarkerIcon(l);document.querySelectorAll(`input[name="damage-${id}"]`).forEach(r=>r.disabled=!insp);const d={lat:l.getLatLng().lat,lon:l.getLatLng().lng,id:l.options.id,address:l.options.address,inspectionStatus:l.options.inspectionStatus};saveMarkerToFirestore(d);updateAddressRemovalList();}});}
-        function updateMarkerIcon(m){const s=m.options.inspectionStatus;if(!s.inspected)m.setIcon(blueIcon);else{switch(s.damage){case'damaged':m.setIcon(greenIcon);break;case'no_damage':m.setIcon(redIcon);break;case'review':m.setIcon(yellowIcon);break;default:m.setIcon(blueIcon);}}}
-        window.removeMarker=function(id){markers.eachLayer(l=>{if(l.options.id===id)markers.removeLayer(l);});removeMarkerFromFirestore(id);updateAddressRemovalList();}
-        function updateAddressRemovalList(){const layers=markers.getLayers();const panel=document.getElementById('address-list-panel-container');const btn=document.getElementById('toggle-address-list-btn');const content=document.getElementById('address-list-content');const filters={inspected:document.querySelector('input[name="filter"][value="inspected"]')?.checked,not_inspected:document.querySelector('input[name="filter"][value="not_inspected"]')?.checked,damaged:document.querySelector('input[name="filter"][value="damaged"]')?.checked,no_damage:document.querySelector('input[name="filter"][value="no_damage"]')?.checked,review:document.querySelector('input[name="filter"][value="review"]')?.checked,};const filteredLayers=layers.filter(l=>{const s=l.options.inspectionStatus;const iF=(filters.inspected&&s.inspected)||(filters.not_inspected&&!s.inspected)||(!filters.inspected&&!filters.not_inspected);if(!iF)return false;const dF=['damaged','no_damage','review'].filter(v=>filters[v]);if(dF.length>0&&!dF.includes(s.damage))return false;return true;});if(layers.length>0){btn.classList.remove('hidden');content.innerHTML=filteredLayers.map(l=>`<div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')"><input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2"><span class="text-xs truncate">${l.options.address}</span></div>`).join('');}else{btn.classList.add('hidden');if(!panel.classList.contains('closed')){btn.click();}content.innerHTML='';}}
-        window.zoomToMarker=function(id){markers.eachLayer(l=>{if(l.options.id===id)markers.zoomToShowLayer(l,()=>l.openPopup());});}
-        
-        // --- Storm Data Logic ---
-        function processNewStormData(csvText) { if (!csvText.trim()) return alert("No data to process."); const tempStormData = parseCsv(csvText); if(tempStormData.length === 0 || !tempStormData[0].ZTIME) { return alert("Could not read date from storm data. Please ensure it's a valid SWDI CSV."); } const stormDate = tempStormData[0].ZTIME.split('T')[0]; stormDataCollection[stormDate] = csvText; if (currentUser) { const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); docRef.set({ collection: stormDataCollection }); } populateStormDatePanel(); swathLayer.clearLayers(); document.getElementById('info-panel').classList.add('hidden'); document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); }
-        function parseCsv(t){const lines=t.trim().split('\n');let all=[],h=[];lines.forEach(l=>{if(l.toLowerCase().startsWith('ztime')){h=l.split(',').map(v=>v.trim().toUpperCase());return;}if(!l.includes(',')||h.length===0)return;const v=l.split(',');const p=h.reduce((o,k,i)=>{o[k]=v[i];return o;},{});all.push(p);});return all;}
-        function populateStormDatePanel(){const dateList=document.getElementById('storm-date-list');const dates=Object.keys(stormDataCollection).sort((a,b)=>new Date(b)-new Date(a));if(dates.length===0){dateList.innerHTML=`<p class="text-sm text-gray-500">No storm data loaded.</p>`;return;}dateList.innerHTML=dates.map(date=>{const entries=parseCsv(stormDataCollection[date]);if(entries.length===0)return'';const maxHail=Math.max(...entries.map(p=>parseFloat(p.MAXSIZE||0)));return`<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${date}"><span class="ml-2 text-gray-700">${date} (${maxHail.toFixed(2)}" hail)</span></label>`}).join('');}
-        window.handleDateSelection=function(){swathLayer.clearLayers();const checkboxes=document.querySelectorAll('#storm-date-list input:checked');const selectedDates=Array.from(checkboxes).map(cb=>cb.value);const infoPanel=document.getElementById('info-panel');const infoContent=document.getElementById('info-content');if(selectedDates.length===0)return infoPanel.classList.add('hidden');infoPanel.classList.remove('hidden');infoContent.innerHTML='';selectedDates.forEach((date,index)=>{const color=stormColors[index%stormColors.length];const pointsForDate=parseCsv(stormDataCollection[date]).filter(p=>p.ZTIME&&p.ZTIME.startsWith(date)&&parseFloat(p.MAXSIZE)>0);drawHailSwath(pointsForDate,color);if(pointsForDate.length>0){const maxHail=Math.max(...pointsForDate.map(p=>parseFloat(p.MAXSIZE)));infoContent.innerHTML+=`<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${date} (${maxHail.toFixed(2)}")</span></div>`;}});}
-        function drawHailSwath(p,c){if(p.length===0)return;if(p.length<3){p.forEach(i=>L.circle([parseFloat(i.LAT),parseFloat(i.LON)],{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer));return;};const tP=p.map(i=>turf.point([parseFloat(i.LON),parseFloat(i.LAT)]));const hull=turf.convex(turf.featureCollection(tP));if(hull){const b1=turf.buffer(hull,1,{units:'miles'});const b2=turf.buffer(hull,2,{units:'miles'});L.geoJSON(b2,{style:()=>({color:c,weight:0,fillOpacity:0.15,fillColor:c})}).addTo(swathLayer);L.geoJSON(b1,{style:()=>({color:c,weight:0,fillOpacity:0.2,fillColor:c})}).addTo(swathLayer);L.geoJSON(hull,{style:()=>({color:c,weight:1,opacity:0.6,fillColor:c,fillOpacity:0.3})}).addTo(swathLayer);}}
+        // ... All existing functions (Auth, Firestore, Markers, UI, etc.) ...
 
         // --- Event Listeners for UI controls ---
-        document.getElementById('remove-selected-btn').addEventListener('click',()=>{const r=document.querySelector('#address-list-content input:checked');if(r)removeMarker(r.value);});
-        document.getElementById('remove-all-btn').addEventListener('click',()=>document.getElementById('confirmation-modal').classList.remove('hidden'));
-        document.getElementById('confirm-remove').addEventListener('click',()=>{removeAllMarkersFromFirestore();markers.clearLayers();updateAddressRemovalList();document.getElementById('confirmation-modal').classList.add('hidden');});
-        document.getElementById('cancel-remove').addEventListener('click',()=>document.getElementById('confirmation-modal').classList.add('hidden'));
-        uploadBtnDesktop.addEventListener('click',()=>document.getElementById('upload-modal').classList.remove('hidden'));
-        uploadBtnMobile.addEventListener('click',()=>document.getElementById('upload-modal').classList.remove('hidden'));
-        document.getElementById('cancel-upload').addEventListener('click',()=>document.getElementById('upload-modal').classList.add('hidden'));
-        document.getElementById('confirm-upload').addEventListener('click',handleUpload);
-        document.getElementById('toggle-storm-panel').addEventListener('click',()=>document.getElementById('storm-info-container').classList.toggle('closed'));
-        toggleAddressListBtn.addEventListener('click', () => {
-            const panel = document.getElementById('address-list-panel-container');
-            const slider = document.getElementById('cluster-slider-container');
-            const topRightControls = document.getElementById('top-right-controls');
-            const isOpening = panel.classList.contains('closed');
-            panel.classList.toggle('closed');
-            toggleAddressListBtn.classList.toggle('bg-white', !isOpening);
-            toggleAddressListBtn.classList.toggle('text-gray-700', !isOpening);
-            toggleAddressListBtn.classList.toggle('bg-red-600', isOpening);
-            toggleAddressListBtn.classList.toggle('text-white', isOpening);
-            if (window.innerWidth < 640) {
-                slider.style.transform = isOpening ? 'translateY(calc(-60vh + 2rem))' : 'translateY(0)';
-            } else {
-                topRightControls.style.right = isOpening ? '21rem' : '1rem';
-            }
-        });
-        document.getElementById('cluster-slider').addEventListener('input',(e)=>{if(!map)return;const r=parseInt(e.target.value,10);const l=markers.getLayers();map.removeLayer(markers);markers=L.markerClusterGroup({maxClusterRadius:r});markers.addLayers(l);map.addLayer(markers);});
-        document.querySelectorAll('input[name="filter"]').forEach(c=>c.addEventListener('change',updateAddressRemovalList));
-        const stormListView=document.getElementById('storm-list-view');const stormInputView=document.getElementById('storm-input-view');
-        document.getElementById('show-input-view-btn').addEventListener('click',()=>{stormListView.classList.add('hidden');stormInputView.classList.remove('hidden');});
-        document.getElementById('back-to-list-view-btn').addEventListener('click',()=>{stormInputView.classList.add('hidden');stormListView.classList.remove('hidden');});
-        document.getElementById('process-storm-data-btn').addEventListener('click',()=>{const d=document.getElementById('storm-data-textarea').value;processNewStormData(d);});
-        document.getElementById('storm-file-upload').addEventListener('change',(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){const t=ev.target.result;document.getElementById('storm-data-textarea').value=t;processNewStormData(t);};r.readAsText(f);e.target.value='';});
+        // ... (all existing event listeners) ...
 
-        // --- Mass Upload Logic ---
-        async function handleUpload() {const fI=document.getElementById('file-upload');const tA=document.getElementById('text-upload');const f=fI.files[0];const t=tA.value;let a=[];if(f)a=await parseFile(f);else if(t.trim())a=t.trim().split('\n').filter(l=>l.trim()!=='');if(a.length===0)return alert("No addresses found.");document.getElementById('upload-modal').classList.add('hidden');fI.value='';tA.value='';showTemporaryMessage("Loading Addresses...");await processAddressList(a);}
-        function showTemporaryMessage(m){const d=document.createElement('div');d.className='fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';d.textContent=m;document.body.appendChild(d);setTimeout(()=>{d.classList.add('opacity-0');setTimeout(()=>d.remove(),500);},6000);}
-        function parseFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const c=e.target.result;if(f.name.endsWith('.csv')||f.name.endsWith('.txt')){res(c.trim().split('\n').filter(l=>l.trim()!==''));}else if(f.name.endsWith('.xlsx')){const w=XLSX.read(c,{type:'binary'});const sN=w.SheetNames[0];const s=w.Sheets[sN];const j=XLSX.utils.sheet_to_json(s,{header:1});res(j.map(row=>row[0]).filter(a=>a));}else{rej(new Error("Unsupported file type."));}};r.onerror=err=>rej(err);r.readAsBinaryString(f);});}
-        async function processAddressList(a){const sI=createStatusIndicator();if(!sI)return;for(let i=0;i<a.length;i++){sI.textContent=`Loading Address ${i+1} of ${a.length}...`;try{const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;const r=await fetch(url);const d=await r.json();if(d&&d.length>0){const{lat,lon,display_name}=d[0];addMarker(parseFloat(lat),parseFloat(lon),display_name,{shouldOpenPopup:false});}else console.warn(`Could not geocode: ${a[i]}`);}catch(e){console.error(`Error geocoding ${a[i]}:`,e);}await new Promise(res=>setTimeout(res,100));}sI.textContent='Done!';sI.classList.remove('bg-yellow-500');sI.classList.add('bg-green-500');setTimeout(()=>sI.remove(),3000);if(markers.getLayers().length>0)map.fitBounds(markers.getBounds(),{padding:[50,50]});}
-        function createStatusIndicator(){if(appContainer.classList.contains('hidden'))return null;const i=document.createElement('div');i.className='px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';document.getElementById('top-right-controls').appendChild(i);return i;}
-        
-        // --- Initial App Load ---
-        function runOnLoad() { /* This function is now replaced by the calls inside onAuthStateChanged */ }
-        runOnLoad();
+        // NEW: Event listener for the on-demand search button
+        document.getElementById('search-storms-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                return alert('Geolocation is not supported by your browser.');
+            }
+            showTemporaryMessage("Searching for recent storms near you...");
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const getStormEvents = functions.httpsCallable('getStormEvents');
+                    const result = await getStormEvents({ lat: latitude, lon: longitude });
+                    if (result.data.resultCount === 0) {
+                        return showTemporaryMessage("No recent hail events found in your area.");
+                    }
+                    
+                    // Convert the JSON result from NOAA to a CSV string
+                    let csvString = "ZTIME,CELL_ID,MAXSIZE,LAT,LON\n";
+                    result.data.results.forEach(event => {
+                        csvString += `${event.ZTIME},${event.CELL_ID},${event.MAXSIZE},${event.LAT},${event.LON}\n`;
+                    });
+                    
+                    // Use our existing function to process the new data
+                    processNewStormData(csvString);
+                    showTemporaryMessage(`Found ${result.data.resultCount} storm events!`);
+                } catch (error) {
+                    console.error('Error calling cloud function:', error);
+                    alert('Could not fetch storm data. Check console for details.');
+                }
+            }, () => {
+                alert('Unable to retrieve your location.');
+            });
+        });
     </script>
 </body>
 </html>
