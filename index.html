@@ -114,18 +114,29 @@
             </div>
             <button id="toggle-storm-panel" class="absolute left-full top-0 bg-white/90 p-2 rounded-r-lg shadow-lg font-semibold text-gray-700 flex flex-col items-center"><span>📅</span><span>Storm Dates</span></button>
         </div>
-        <div id="address-list-panel-container" class="absolute bottom-0 left-0 w-full h-auto max-h-[60vh] rounded-t-lg z-[1000] closed sm:top-0 sm:right-0 sm:left-auto sm:bottom-auto sm:w-80 sm:h-full sm:max-h-full sm:rounded-none">
-           <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full flex flex-col rounded-t-lg sm:rounded-none">
-                <div class="sm:hidden w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 flex-shrink-0"></div>
-                <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
-                <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0"><h4 class="font-semibold text-sm mb-2">Filter by Status</h4><div class="grid grid-cols-2 gap-2 text-sm"><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label></div></div>
-                <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
-                <div class="mt-2 pt-2 border-t flex-shrink-0 space-y-2">
-                    <button id="remove-selected-btn" class="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition">Remove Selected</button>
-                    <button id="remove-all-btn" class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Addresses</button>
-                </div>
+      <div id="address-list-panel-container" class="absolute bottom-0 left-0 w-full h-auto max-h-[60vh] rounded-t-lg z-[1000] closed sm:top-0 sm:right-0 sm:left-auto sm:bottom-auto sm:w-80 sm:h-full sm:max-h-full sm:rounded-none">
+   <div class="bg-white/90 backdrop-blur-sm p-4 shadow-lg h-full flex flex-col rounded-t-lg sm:rounded-none">
+        <div class="sm:hidden w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 flex-shrink-0"></div>
+        <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
+        <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0">
+            <h4 class="font-semibold text-sm mb-2">Filter by Status</h4>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label>
+                <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label>
+                <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label>
+                <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label>
+                <label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label>
             </div>
         </div>
+        
+        <div id="address-list-content" class="space-y-1 overflow-y-auto h-[calc(100%-18rem)] sm:h-auto sm:flex-grow"></div>
+        
+        <div class="mt-2 pt-2 border-t flex-shrink-0 space-y-2">
+            <button id="remove-selected-btn" class="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition">Remove Selected</button>
+            <button id="remove-all-btn" class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Addresses</button>
+        </div>
+    </div>
+</div>
         <div id="legend-panel" class="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden">
             <h4 class="font-bold text-gray-800 mb-2">Selected Storms</h4>
             <div id="legend-content" class="space-y-1"></div>
