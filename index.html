@@ -172,7 +172,9 @@
         // --- END: Firebase Configuration ---
 
         // --- Global App Variables ---
-        let map; let currentUser = null; let stormDataCollection = {};
+        let map;
+        let currentUser = null;
+        let stormDataCollection = {};
         let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
         let swathLayer = L.layerGroup();
         const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
@@ -187,24 +189,149 @@
         // --- UI Element References ---
         const loginContainer = document.getElementById('login-container');
         const appContainer = document.getElementById('app-container');
-        // ... (other UI references are grabbed as needed)
+        const googleSigninBtn = document.getElementById('google-signin-btn');
+        const emailInput = document.getElementById('email-input');
+        const emailSigninBtn = document.getElementById('email-signin-btn');
+        const userEmailSpan = document.getElementById('user-email');
+        const signoutBtn = document.getElementById('signout-btn');
+        const addressInput = document.getElementById('address-input');
+        const addressSuggestions = document.getElementById('address-suggestions');
+        const uploadBtnDesktop = document.getElementById('upload-btn-desktop');
+        const uploadBtnMobile = document.getElementById('upload-btn-mobile');
+        const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
 
         // --- Map Initialization Function ---
-        function initializeMap() { /* ... */ }
+        function initializeMap() {
+            if (map) return;
+            map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { minZoom: 3, maxZoom: 19, attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+            map.addLayer(markers);
+            swathLayer.addTo(map);
+        }
 
         // --- Authentication Logic ---
-        auth.onAuthStateChanged(user => { /* ... */ });
-        
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                initializeMap();
+                loadMarkersFromFirestore();
+                loadStormDataFromFirestore();
+            } else {
+                currentUser = null;
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                if (markers) markers.clearLayers();
+                if (swathLayer) swathLayer.clearLayers();
+                if (map) { map.remove(); map = null; }
+            }
+        });
+        googleSigninBtn.addEventListener('click', () => { 
+            const provider = new firebase.auth.GoogleAuthProvider(); 
+            auth.signInWithPopup(provider).catch(error => console.error("Google Sign-In Error:", error)); 
+        });
+        emailSigninBtn.addEventListener('click', () => { 
+            const email = emailInput.value; 
+            if (!email) return alert("Please enter your email address."); 
+            const actionCodeSettings = { url: window.location.href, handleCodeInApp: true }; 
+            auth.sendSignInLinkToEmail(email, actionCodeSettings).then(() => { 
+                window.localStorage.setItem('emailForSignIn', email); 
+                document.getElementById('email-message').textContent = "Login link sent!"; 
+            }).catch(error => { 
+                console.error("Email Link Error:", error); 
+                document.getElementById('email-message').textContent = "Error sending link."; 
+            }); 
+        });
+        signoutBtn.addEventListener('click', () => auth.signOut());
+        if (auth.isSignInWithEmailLink(window.location.href)) { 
+            let email = window.localStorage.getItem('emailForSignIn'); 
+            if (!email) email = window.prompt('Please provide your email for confirmation'); 
+            auth.signInWithEmailLink(email, window.location.href)
+                .then(() => window.localStorage.removeItem('emailForSignIn'))
+                .catch(error => console.error(error)); 
+        }
+
+        // --- Marker Icons ---
+        const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
         // --- Firestore Data Functions ---
-        async function loadMarkersFromFirestore() { /* ... */ }
-        async function saveMarkerToFirestore(d) { /* ... */ }
-        async function removeMarkerFromFirestore(id) { /* ... */ }
-        async function removeAllMarkersFromFirestore() { /* ... */ }
-        async function loadStormDataFromFirestore() { /* ... */ }
+        async function loadMarkersFromFirestore() {
+            if (!currentUser) return; 
+            markers.clearLayers(); 
+            try { 
+                const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get(); 
+                querySnapshot.forEach(doc => { 
+                    const d = doc.data(); 
+                    addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, shouldOpenPopup: false, source: 'firestore' }); 
+                }); 
+            } catch (e) { console.error("Error loading markers:", e); } 
+            updateAddressRemovalList(); 
+        }
+        async function saveMarkerToFirestore(d) { 
+            if (!currentUser) return; 
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); } 
+        }
+        async function removeMarkerFromFirestore(id) { 
+            if (!currentUser) return; 
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); } 
+        }
+        async function removeAllMarkersFromFirestore() { 
+            if (!currentUser) return; 
+            const q = await db.collection('users').doc(currentUser.uid).collection('markers').get(); 
+            const batch = db.batch(); 
+            q.docs.forEach(doc => batch.delete(doc.ref)); 
+            await batch.commit(); 
+        }
+        async function loadStormDataFromFirestore() { 
+            if (!currentUser) return; 
+            try { 
+                const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); 
+                const doc = await docRef.get(); 
+                if (doc.exists) { 
+                    stormDataCollection = doc.data().collection || {}; 
+                } else { 
+                    const defaultStormData = `ZTIME,WSR_ID,CELL_ID,PROB,SEVPROB,MAXSIZE,LAT,LON\n2025-03-30T01:09:44Z,KFWS,R0,100,20,0.5,33.914,-98.520`; 
+                    const date = '2025-03-30'; 
+                    stormDataCollection = { [date]: defaultStormData }; 
+                    await docRef.set({ collection: stormDataCollection }); 
+                } 
+            } catch (error) { 
+                console.error("Error loading storm data:", error); 
+                stormDataCollection = {}; 
+            } 
+            populateStormDatePanel(); 
+        }
         
         // --- Address Search & Geocoding ---
-        async function fetchAddressSuggestions(q) { /* ... */ }
-        function displaySuggestions(s) { /* ... */ }
+        async function fetchAddressSuggestions(q) { 
+            if(q.length<3){
+                addressSuggestions.innerHTML='';
+                addressSuggestions.classList.add('hidden');
+                return;
+            }
+            const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us`;
+            try{
+                const r=await fetch(url);
+                const d=await r.json();
+                displaySuggestions(d);
+            } catch(e) {
+                console.error('Error fetching suggestions:',e);
+            }
+        }
+        function displaySuggestions(s) { 
+            if(s.length===0){
+                addressSuggestions.innerHTML='<div class="p-3 text-gray-500">No results found.</div>';
+            } else {
+                addressSuggestions.innerHTML=s.slice(0,5).map(i=>`<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');
+            }
+            addressSuggestions.classList.remove('hidden');
+        }
         async function geocodeLocation(locationString) {
             if (!locationString) return null;
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationString)}&countrycodes=us&limit=1`;
@@ -220,22 +347,286 @@
                 return null;
             }
         }
-        
+        addressInput.addEventListener('keyup', (e)=>{
+            clearTimeout(suggestionTimeout);
+            suggestionTimeout=setTimeout(()=>fetchAddressSuggestions(e.target.value),300);
+        });
+        addressSuggestions.addEventListener('click',(e)=>{
+            const s=e.target.closest('div');
+            if(s){
+                const lat=parseFloat(s.dataset.lat);
+                const lon=parseFloat(s.dataset.lon);
+                const name=s.dataset.name;
+                addMarker(lat,lon,name);
+                addressInput.value='';
+                addressSuggestions.classList.add('hidden');
+            }
+        });
+
         // --- Marker Management & UI Logic ---
-        function addMarker(lat,lon,name,opt={}) { /* ... */ }
-        window.updateMarkerStatus = function(id) { /* ... */ }
-        window.removeMarker = function(id) { /* ... */ }
-        function updateAddressRemovalList() { /* ... */ }
+        function addMarker(lat,lon,name,opt={}){
+            const id=opt.id||`marker-${Date.now()}`;
+            const status=opt.inspectionStatus||{inspected:false,damage:'none',photoLink:''};
+            const popup=opt.shouldOpenPopup!==false;
+            const marker=L.marker([lat,lon],{id:id,address:name,inspectionStatus:status});
+            marker.bindPopup(()=>createPopupContent(id,name));
+            marker.on('popupopen',()=>populatePopup(id,marker.options.inspectionStatus));
+            markers.addLayer(marker);
+            updateMarkerIcon(marker);
+            if(popup) markers.zoomToShowLayer(marker,()=>marker.openPopup());
+            if(opt.source!=='firestore'){
+                const data={lat,lon,id,address:name,inspectionStatus:status};
+                saveMarkerToFirestore(data);
+            }
+            updateAddressRemovalList();
+        }
+        function createPopupContent(id,name){
+            return`<div class="space-y-3">
+                <p class="font-bold text-gray-800">${name}</p>
+                <div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div>
+                <div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div>
+                <div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div>
+                <button class="popup-button-remove" onclick="removeMarker('${id}')">Remove</button>
+            </div>`;
+        }
+        function populatePopup(id,s){
+            document.getElementById(`inspected-${id}`).checked=s.inspected;
+            document.getElementById(`photo-link-${id}`).value=s.photoLink;
+            const r=document.querySelectorAll(`input[name="damage-${id}"]`);
+            r.forEach(radio=>{
+                radio.disabled=!s.inspected;
+                if(radio.value===s.damage) radio.checked=true;
+            });
+        }
+        window.updateMarkerStatus=function(id){
+            markers.eachLayer(l=>{
+                if(l.options.id===id){
+                    const insp=document.getElementById(`inspected-${id}`).checked;
+                    const link=document.getElementById(`photo-link-${id}`).value;
+                    let dmg='none';
+                    if(insp){
+                        const sel=document.querySelector(`input[name="damage-${id}"]:checked`);
+                        if(sel) dmg=sel.value;
+                    }
+                    l.options.inspectionStatus={inspected:insp,damage:dmg,photoLink:link};
+                    updateMarkerIcon(l);
+                    document.querySelectorAll(`input[name="damage-${id}"]`).forEach(r=>r.disabled=!insp);
+                    const d={lat:l.getLatLng().lat,lon:l.getLatLng().lng,id:l.options.id,address:l.options.address,inspectionStatus:l.options.inspectionStatus};
+                    saveMarkerToFirestore(d);
+                    updateAddressRemovalList();
+                }
+            });
+        }
+        function updateMarkerIcon(m){
+            const s=m.options.inspectionStatus;
+            if(!s.inspected) m.setIcon(blueIcon);
+            else {
+                switch(s.damage){
+                    case'damaged':m.setIcon(greenIcon);break;
+                    case'no_damage':m.setIcon(redIcon);break;
+                    case'review':m.setIcon(yellowIcon);break;
+                    default:m.setIcon(blueIcon);
+                }
+            }
+        }
+        window.removeMarker=function(id){
+            markers.eachLayer(l=>{
+                if(l.options.id===id) markers.removeLayer(l);
+            });
+            removeMarkerFromFirestore(id);
+            updateAddressRemovalList();
+        }
+        function updateAddressRemovalList(){
+            const layers = markers.getLayers();
+            const panel = document.getElementById('address-list-panel-container');
+            const btn = document.getElementById('toggle-address-list-btn');
+            const content = document.getElementById('address-list-content');
+            const filters={inspected:document.querySelector('input[name="filter"][value="inspected"]')?.checked,not_inspected:document.querySelector('input[name="filter"][value="not_inspected"]')?.checked,damaged:document.querySelector('input[name="filter"][value="damaged"]')?.checked,no_damage:document.querySelector('input[name="filter"][value="no_damage"]')?.checked,review:document.querySelector('input[name="filter"][value="review"]')?.checked,};
+            const filteredLayers=layers.filter(l=>{const s=l.options.inspectionStatus;const iF=(filters.inspected&&s.inspected)||(filters.not_inspected&&!s.inspected)||(!filters.inspected&&!filters.not_inspected);if(!iF)return false;const dF=['damaged','no_damage','review'].filter(v=>filters[v]);if(dF.length>0&&!dF.includes(s.damage))return false;return true;});
+            if (layers.length > 0) {
+                btn.classList.remove('hidden');
+                content.innerHTML = filteredLayers.map(l => `<div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')"><input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2"><span class="text-xs truncate">${l.options.address}</span></div>`).join('');
+            } else {
+                btn.classList.add('hidden');
+                if(!panel.classList.contains('closed')){ btn.click(); }
+                content.innerHTML = '';
+            }
+        }
+        window.zoomToMarker=function(id){ markers.eachLayer(l=>{ if(l.options.id===id) markers.zoomToShowLayer(l,()=>l.openPopup()); }); }
         
         // --- Storm Data Logic ---
-        function processNewStormData(csvText) { /* ... */ }
-        function parseCsv(t) { /* ... */ }
-        function populateStormDatePanel() { /* ... */ }
-        window.handleDateSelection = function() { /* ... */ }
-        function drawHailSwath(p, c) { /* ... */ }
+        function processNewStormData(csvText) { 
+            if (!csvText.trim()) return alert("No data to process."); 
+            const tempStormData = parseCsv(csvText); 
+            if(tempStormData.length === 0 || !tempStormData[0].ZTIME) { 
+                return alert("Could not read date from storm data. Please ensure it's a valid SWDI CSV."); 
+            } 
+            const stormDate = tempStormData[0].ZTIME.split('T')[0]; 
+            stormDataCollection[stormDate] = csvText; 
+            if (currentUser) { 
+                const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); 
+                docRef.set({ collection: stormDataCollection }); 
+            } 
+            populateStormDatePanel(); 
+            swathLayer.clearLayers(); 
+            document.getElementById('info-panel').classList.add('hidden'); 
+            document.getElementById('storm-input-view').classList.add('hidden'); 
+            document.getElementById('storm-list-view').classList.remove('hidden'); 
+        }
+        function parseCsv(t) {
+            const lines = t.trim().split('\n'); 
+            let all = [], h = []; 
+            lines.forEach(l => {
+                if(l.toLowerCase().startsWith('ztime')){ 
+                    h = l.split(',').map(v => v.trim().toUpperCase()); 
+                    return; 
+                }
+                if(!l.includes(',') || h.length === 0) return; 
+                const v = l.split(',');
+                const p = h.reduce((o,k,i) => { o[k]=v[i]; return o; }, {});
+                all.push(p);
+            });
+            return all;
+        }
+        function populateStormDatePanel() {
+            const dateList = document.getElementById('storm-date-list');
+            const dates = Object.keys(stormDataCollection).sort((a,b) => new Date(b) - new Date(a));
+            if(dates.length === 0){
+                dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`;
+                return;
+            }
+            dateList.innerHTML = dates.map(date => {
+                const entries = parseCsv(stormDataCollection[date]);
+                if(entries.length === 0) return '';
+                const maxHail = Math.max(...entries.map(p => parseFloat(p.MAXSIZE || 0)));
+                return `<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${date}"><span class="ml-2 text-gray-700">${date} (${maxHail.toFixed(2)}" hail)</span></label>`
+            }).join('');
+        }
+        window.handleDateSelection = function() {
+            swathLayer.clearLayers();
+            const checkboxes = document.querySelectorAll('#storm-date-list input:checked');
+            const selectedDates = Array.from(checkboxes).map(cb => cb.value);
+            const infoPanel = document.getElementById('info-panel');
+            const infoContent = document.getElementById('info-content');
+            if (selectedDates.length === 0) return infoPanel.classList.add('hidden');
+            infoPanel.classList.remove('hidden');
+            infoContent.innerHTML = '';
+            selectedDates.forEach((date, index) => {
+                const color = stormColors[index % stormColors.length];
+                const pointsForDate = parseCsv(stormDataCollection[date]).filter(p => p.ZTIME && p.ZTIME.startsWith(date) && parseFloat(p.MAXSIZE) > 0);
+                drawHailSwath(pointsForDate, color);
+                if (pointsForDate.length > 0) {
+                    const maxHail = Math.max(...pointsForDate.map(p => parseFloat(p.MAXSIZE)));
+                    infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${date} (${maxHail.toFixed(2)}")</span></div>`;
+                }
+            });
+        }
+        function drawHailSwath(p, c) {
+            if(p.length === 0) return;
+            if (p.length < 3) {
+                p.forEach(i => L.circle([parseFloat(i.LAT),parseFloat(i.LON)],{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer));
+                return;
+            };
+            const tP = p.map(i => turf.point([parseFloat(i.LON), parseFloat(i.LAT)]));
+            const hull = turf.convex(turf.featureCollection(tP));
+            if (hull) {
+                const b1 = turf.buffer(hull, 1, {units:'miles'});
+                const b2 = turf.buffer(hull, 2, {units:'miles'});
+                L.geoJSON(b2, {style:()=>({color:c,weight:0,fillOpacity:0.15,fillColor:c})}).addTo(swathLayer);
+                L.geoJSON(b1, {style:()=>({color:c,weight:0,fillOpacity:0.2,fillColor:c})}).addTo(swathLayer);
+                L.geoJSON(hull, {style:()=>({color:c,weight:1,opacity:0.6,fillColor:c,fillOpacity:0.3})}).addTo(swathLayer);
+            }
+        }
 
-        // --- Event Listeners and other functions ---
-        // I will write out the full functions below this comment block
+        // --- Event Listeners for UI controls ---
+        document.getElementById('remove-selected-btn').addEventListener('click', () => { const r=document.querySelector('#address-list-content input:checked'); if (r) removeMarker(r.value); });
+        document.getElementById('remove-all-btn').addEventListener('click', () => document.getElementById('confirmation-modal').classList.remove('hidden'));
+        document.getElementById('confirm-remove').addEventListener('click', () => { removeAllMarkersFromFirestore(); markers.clearLayers(); updateAddressRemovalList(); document.getElementById('confirmation-modal').classList.add('hidden'); });
+        document.getElementById('cancel-remove').addEventListener('click', () => document.getElementById('confirmation-modal').classList.add('hidden'));
+        uploadBtnDesktop.addEventListener('click', () => document.getElementById('upload-modal').classList.remove('hidden'));
+        uploadBtnMobile.addEventListener('click', () => document.getElementById('upload-modal').classList.remove('hidden'));
+        document.getElementById('cancel-upload').addEventListener('click', () => document.getElementById('upload-modal').classList.add('hidden'));
+        document.getElementById('confirm-upload').addEventListener('click', handleUpload);
+        document.getElementById('toggle-storm-panel').addEventListener('click', () => document.getElementById('storm-info-container').classList.toggle('closed'));
+        toggleAddressListBtn.addEventListener('click', () => {
+            const panel = document.getElementById('address-list-panel-container');
+            const slider = document.getElementById('cluster-slider-container');
+            const topRightControls = document.getElementById('top-right-controls');
+            const isOpening = panel.classList.contains('closed');
+            panel.classList.toggle('closed');
+            toggleAddressListBtn.classList.toggle('bg-white', !isOpening);
+            toggleAddressListBtn.classList.toggle('text-gray-700', !isOpening);
+            toggleAddressListBtn.classList.toggle('bg-red-600', isOpening);
+            toggleAddressListBtn.classList.toggle('text-white', isOpening);
+            if (window.innerWidth < 640) {
+                slider.style.transform = isOpening ? 'translateY(calc(-60vh + 2rem))' : 'translateY(0)';
+            } else {
+                topRightControls.style.right = isOpening ? '21rem' : '1rem';
+            }
+        });
+        document.getElementById('cluster-slider').addEventListener('input', (e) => {
+            if (!map) return;
+            const newRadius = parseInt(e.target.value, 10);
+            const allLayers = markers.getLayers();
+            map.removeLayer(markers);
+            markers = L.markerClusterGroup({ maxClusterRadius: newRadius });
+            markers.addLayers(allLayers);
+            map.addLayer(markers);
+        });
+        document.querySelectorAll('input[name="filter"]').forEach(c => c.addEventListener('change', updateAddressRemovalList));
+        document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
+        document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
+        document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
+        document.getElementById('storm-file-upload').addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = function(ev) { const t = ev.target.result; document.getElementById('storm-data-textarea').value = t; processNewStormData(t); }; r.readAsText(f); e.target.value = ''; });
+        document.getElementById('gemini-search-btn').addEventListener('click', async () => {
+            const query = document.getElementById('gemini-search-input').value;
+            if (!query.trim()) return alert("Please enter a search query.");
+            showTemporaryMessage("Thinking...");
+            try {
+                const extractEntities = functions.httpsCallable('extractEntitiesFromText');
+                const result = await extractEntities({ query: query });
+                const { location, startDate, endDate } = result.data;
+                if (!location) {
+                    return showTemporaryMessage("Sorry, I couldn't understand the location in your request.");
+                }
+                const coords = await geocodeLocation(location);
+                if (!coords) {
+                    return showTemporaryMessage(`Sorry, I couldn't find coordinates for "${location}".`);
+                }
+                showTemporaryMessage(`Searching for storms near ${location}...`);
+                const getStormEvents = functions.httpsCallable('getStormEvents');
+                const stormResult = await getStormEvents({ lat: coords.lat, lon: coords.lon });
+                if (stormResult.data.resultCount === 0) {
+                    return showTemporaryMessage("No recent hail events found in that area.");
+                }
+                let csvString = "ZTIME,CELL_ID,MAXSIZE,LAT,LON\n";
+                stormResult.data.results.forEach(event => { csvString += `${event.ZTIME},${event.CELL_ID},${event.MAXSIZE},${event.LAT},${event.LON}\n`; });
+                processNewStormData(csvString);
+                showTemporaryMessage(`Found ${stormResult.data.resultCount} storm events!`);
+            } catch (error) {
+                console.error("Error with Gemini search:", error);
+                alert("An error occurred with the AI search. Please check the console for details.");
+            }
+        });
+
+        // --- Mass Upload Logic ---
+        async function handleUpload() {
+            const fileUploadInput = document.getElementById('file-upload'); const textUploadArea = document.getElementById('text-upload');
+            const file = fileUploadInput.files[0]; const text = textUploadArea.value; let addresses = [];
+            if (file) addresses = await parseFile(file);
+            else if (text.trim()) addresses = text.trim().split('\n').filter(l => l.trim() !== '');
+            if (addresses.length === 0) return alert("No addresses found.");
+            document.getElementById('upload-modal').classList.add('hidden'); fileUploadInput.value = ''; textUploadArea.value = '';
+            showTemporaryMessage("Loading Addresses..."); await processAddressList(addresses);
+        }
+        function showTemporaryMessage(m) { const d = document.createElement('div'); d.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500'; d.textContent = m; document.body.appendChild(d); setTimeout(() => { d.classList.add('opacity-0'); setTimeout(() => d.remove(), 500); }, 6000); }
+        function parseFile(f) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = e => { const c = e.target.result; if (f.name.endsWith('.csv') || f.name.endsWith('.txt')) { res(c.trim().split('\n').filter(l => l.trim() !== '')); } else if (f.name.endsWith('.xlsx')) { const w = XLSX.read(c, { type: 'binary' }); const sN = w.SheetNames[0]; const s = w.Sheets[sN]; const j = XLSX.utils.sheet_to_json(s, { header: 1 }); res(j.map(row => row[0]).filter(a => a)); } else { rej(new Error("Unsupported file type.")); } }; r.onerror = err => rej(err); r.readAsBinaryString(f); }); }
+        async function processAddressList(a) {
+            const sI = createStatusIndicator(); if (!sI) return;
+            for (let i = 0; i < a.length; i++) { sI.textContent = `Loading Address ${i + 1} of ${a.length}...`; try { const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`; const r = await fetch(url); const d = await r.json(); if (d && d.length > 0) { const { lat, lon, display_name } = d[0]; addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false }); } else console.warn(`Could not geocode: ${a[i]}`); } catch (e) { console.error(`Error geocoding ${a[i]}:`, e); } await new Promise(res => setTimeout(res, 100)); }
+            sI.textContent = 'Done!'; sI.classList.remove('bg-yellow-500'); sI.classList.add('bg-green-500'); setTimeout(() => sI.remove(), 3000); if (markers.getLayers().length > 0) map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }
+        function createStatusIndicator() { if (appContainer.classList.contains('hidden')) return null; const i = document.createElement('div'); i.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all'; document.getElementById('top-right-controls').appendChild(i); return i; }
     </script>
 </body>
 </html>
