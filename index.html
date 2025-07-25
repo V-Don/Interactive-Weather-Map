@@ -324,6 +324,22 @@
         document.getElementById('back-to-list-view-btn').addEventListener('click',()=>{document.getElementById('storm-input-view').classList.add('hidden');document.getElementById('storm-list-view').classList.remove('hidden');});
         document.getElementById('process-storm-data-btn').addEventListener('click',()=>{const d=document.getElementById('storm-data-textarea').value;processNewStormData(d);});
         document.getElementById('storm-file-upload').addEventListener('change',(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){const t=ev.target.result;document.getElementById('storm-data-textarea').value=t;processNewStormData(t);};r.readAsText(f);e.target.value='';});
+        document.getElementById('search-storms-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) { return alert('Geolocation is not supported by your browser.'); }
+            showTemporaryMessage("Searching for recent storms near you...");
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const getStormEvents = functions.httpsCallable('getStormEvents');
+                    const result = await getStormEvents({ lat: latitude, lon: longitude });
+                    if (result.data.resultCount === 0) { return showTemporaryMessage("No recent hail events found in your area."); }
+                    let csvString = "ZTIME,CELL_ID,MAXSIZE,LAT,LON\n";
+                    result.data.results.forEach(event => { csvString += `${event.ZTIME},${event.CELL_ID},${event.MAXSIZE},${event.LAT},${event.LON}\n`; });
+                    processNewStormData(csvString);
+                    showTemporaryMessage(`Found ${result.data.resultCount} storm events!`);
+                } catch (error) { console.error('Error calling cloud function:', error); alert('Could not fetch storm data. Check console for details.'); }
+            }, () => { alert('Unable to retrieve your location.'); });
+        });
 
         // --- Mass Upload Logic ---
         async function handleUpload() {const fI=document.getElementById('file-upload');const tA=document.getElementById('text-upload');const f=fI.files[0];const t=tA.value;let a=[];if(f)a=await parseFile(f);else if(t.trim())a=t.trim().split('\n').filter(l=>l.trim()!=='');if(a.length===0)return alert("No addresses found.");document.getElementById('upload-modal').classList.add('hidden');fI.value='';tA.value='';showTemporaryMessage("Loading Addresses...");await processAddressList(a);}
