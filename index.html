@@ -167,10 +167,10 @@
         </div>
         
         <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl text-center"><h3 class="text-xl font-bold mb-4">Are you sure?</h3><p class="text-gray-600 mb-6">This will remove all addresses from the map.</p><div class="flex justify-center gap-4"><button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button><button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button></div></div>
+            <div class="bg-white p-8 rounded-lg shadow-xl text-center"><h3 class="text-xl font-bold mb-4">Are you sure?</h3><p class="text-gray-600 mb-6">This will remove all addresses from the map.</p><div class="flex justify-center gap-4"><button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button><button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button></div></div>
         </div>
         <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg"><h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div><div class="text-center text-gray-500">OR</div><div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div></div><div class="flex justify-end gap-4 mt-6"><button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button><button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button></div></div>
+            <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg"><h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div><div class="text-center text-gray-500">OR</div><div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div></div><div class="flex justify-end gap-4 mt-6"><button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button><button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button></div></div>
         </div>
     </div>
 
@@ -313,11 +313,49 @@
         }
 
         // --- Firestore Data Functions ---
-        async function loadMarkersFromFirestore() { if (!currentUser) return; markers.clearLayers(); try { const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get(); querySnapshot.forEach(doc => { const d = doc.data(); addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, county: d.county, state: d.state, shouldOpenPopup: false, source: 'firestore' }); }); } catch (e) { console.error("Error loading markers:", e); } updateAddressRemovalList(); }
-        async function saveMarkerToFirestore(d) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); } }
-        async function removeMarkerFromFirestore(id) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); } }
-        async function removeAllMarkersFromFirestore() { if (!currentUser) return; const q = await db.collection('users').doc(currentUser.uid).collection('markers').get(); const batch = db.batch(); q.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
-        async function loadStormDataFromFirestore() { if (!currentUser) return; try { const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); const doc = await docRef.get(); if (doc.exists && doc.data().collection) { stormDataCollection = doc.data().collection; } else { stormDataCollection = []; } } catch (error) { console.error("Error loading storm data:", error); stormDataCollection = []; } populateStormDatePanel(); }
+        async function loadMarkersFromFirestore() {
+            if (!currentUser) return;
+            markers.clearLayers();
+            try {
+                const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get();
+                querySnapshot.forEach(doc => {
+                    const d = doc.data();
+                    addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, county: d.county, state: d.state, shouldOpenPopup: false, source: 'firestore' });
+                });
+            } catch (e) { console.error("Error loading markers:", e); }
+            updateAddressRemovalList();
+        }
+        async function saveMarkerToFirestore(d) {
+            if (!currentUser) return;
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); }
+        }
+        async function removeMarkerFromFirestore(id) {
+            if (!currentUser) return;
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); }
+        }
+        async function removeAllMarkersFromFirestore() {
+            if (!currentUser) return;
+            const q = await db.collection('users').doc(currentUser.uid).collection('markers').get();
+            const batch = db.batch();
+            q.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        async function loadStormDataFromFirestore() {
+            if (!currentUser) return;
+            try {
+                const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents');
+                const doc = await docRef.get();
+                if (doc.exists && doc.data().collection) {
+                    stormDataCollection = doc.data().collection;
+                } else {
+                    stormDataCollection = [];
+                }
+            } catch (error) {
+                console.error("Error loading storm data:", error);
+                stormDataCollection = [];
+            }
+            populateStormDatePanel();
+        }
         
         // --- Address Search & Geocoding ---
         async function fetchAddressSuggestions(q) {
@@ -580,9 +618,12 @@
             for (let i = 0; i < a.length; i++) {
                 sI.textContent = `Loading Address ${i + 1} of ${a.length}...`;
                 try {
-                    const geo = await reverseGeocode(0,0); // This is a placeholder, needs real geocoding
-                    if (geo) {
-                         await addMarkerWithGeocode(0, 0, a[i]); // Needs proper lat/lon
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;
+                    const r = await fetch(url);
+                    const d = await r.json();
+                    if (d && d.length > 0) {
+                        const { lat, lon } = d[0];
+                        await addMarkerWithGeocode(parseFloat(lat), parseFloat(lon));
                     } else console.warn(`Could not geocode: ${a[i]}`);
                 } catch (e) {
                     console.error(`Error geocoding ${a[i]}:`, e);
