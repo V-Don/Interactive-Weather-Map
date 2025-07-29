@@ -456,17 +456,21 @@
             if (!csvText.trim()) return alert("No data to process.");
             const tempStormData = parseCsv(csvText);
             const firstRow = tempStormData.find(row => (row.CZ_NAME && row.CZ_NAME !== 'NA' && row.STATE) || (row.LAT && row.LON));
-            if (!firstRow) return alert("Could not read location or date data from CSV.");
+            if (!firstRow) {
+                return alert("Could not read location or date data from CSV. Please check the format.");
+            }
             
             let locationName;
+            let date = (firstRow.BEGIN_DATE_TIME || firstRow.ZTIME).split(/[\sT]/)[0];
+            
             if (firstRow.CZ_NAME && firstRow.STATE) {
                 locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
             } else {
+                showTemporaryMessage("CSV has no location name. Looking it up...");
                 const geo = await reverseGeocode(parseFloat(firstRow.LAT), parseFloat(firstRow.LON));
                 locationName = `${geo.county}, ${geo.state}`;
             }
 
-            const date = (firstRow.BEGIN_DATE_TIME || firstRow.ZTIME).split(/[\sT]/)[0];
             const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAXSIZE || p.MAGNITUDE || 0)));
             const id = `${date}_${locationName.replace(/, | /g, '_')}`;
 
@@ -484,11 +488,37 @@
             document.getElementById('storm-input-view').classList.add('hidden');
             document.getElementById('storm-list-view').classList.remove('hidden');
         }
-        function parseCsv(t) {const lines = t.trim().split('\n'); let all = [], h = []; lines.forEach(l => { const lowerL = l.toLowerCase(); if (lowerL.includes('begin_date_time') || lowerL.startsWith('ztime')) { h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase()); return; } if (!l.includes(',') || h.length === 0) return; const v = l.split(','); const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].replace(/"/g, '').trim() : ''; return o; }, {}); all.push(p); }); return all;}
+        function parseCsv(t) {
+            const lines = t.trim().split('\n');
+            let all = [], h = [];
+            lines.forEach(l => {
+                const lowerL = l.toLowerCase();
+                if (lowerL.includes('begin_date_time') || lowerL.startsWith('ztime')) {
+                    h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase());
+                    return;
+                }
+                if (!l.includes(',') || h.length === 0) return;
+                const v = l.split(',');
+                const p = h.reduce((o, k, i) => {
+                    if(h[i]) { // Ensure header exists for this column
+                        o[h[i]] = v[i] ? v[i].replace(/"/g, '').trim() : '';
+                    }
+                    return o;
+                }, {});
+                all.push(p);
+            });
+            return all;
+        }
         function populateStormDatePanel() {
             const dateList = document.getElementById('storm-date-list');
-            if (stormDataCollection.length === 0) { dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`; return; }
-            const groupedByLocation = stormDataCollection.reduce((acc, storm) => { (acc[storm.locationName] = acc[storm.locationName] || []).push(storm); return acc; }, {});
+            if (!stormDataCollection || stormDataCollection.length === 0) {
+                dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`;
+                return;
+            }
+            const groupedByLocation = stormDataCollection.reduce((acc, storm) => {
+                (acc[storm.locationName] = acc[storm.locationName] || []).push(storm);
+                return acc;
+            }, {});
             let html = '';
             for (const location in groupedByLocation) {
                 html += `<details open><summary>${location}</summary><div class="storm-event-item">`;
@@ -517,7 +547,23 @@
                 if (pointsForDate.length > 0) { infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${storm.date} - ${storm.locationName} (${storm.maxHail.toFixed(2)}")</span></div>`; }
             });
         }
-        function drawHailSwath(p, c) { if(p.length === 0) return; const coords = p.map(i => [parseFloat(i.BEGIN_LAT || i.LAT), parseFloat(i.BEGIN_LON || i.LON)]); if (p.length < 3) { coords.forEach(coord => L.circle(coord, {radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer)); return; }; const tP = coords.map(coord => turf.point([coord[1], coord[0]])); const hull = turf.convex(turf.featureCollection(tP)); if (hull) { const b1 = turf.buffer(hull, 1, { units: 'miles' }); const b2 = turf.buffer(hull, 2, { units: 'miles' }); L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer); L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer); L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer); } }
+        function drawHailSwath(p, c) {
+            if(p.length === 0) return;
+            const coords = p.map(i => [parseFloat(i.BEGIN_LAT || i.LAT), parseFloat(i.BEGIN_LON || i.LON)]).filter(coord => !isNaN(coord[0]) && !isNaN(coord[1]));
+            if (coords.length < 3) {
+                coords.forEach(coord => L.circle(coord,{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer));
+                return;
+            };
+            const tP = coords.map(coord => turf.point([coord[1], coord[0]]));
+            const hull = turf.convex(turf.featureCollection(tP));
+            if (hull) {
+                const b1 = turf.buffer(hull, 1, { units: 'miles' });
+                const b2 = turf.buffer(hull, 2, { units: 'miles' });
+                L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer);
+                L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer);
+                L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer);
+            }
+        }
         window.searchNoaaForLocation = function(county, state) {
             map.closePopup();
             const today = new Date();
@@ -558,6 +604,14 @@
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
         document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
+        document.getElementById('generate-noaa-link-btn').addEventListener('click', () => {
+            const countyState = document.getElementById('county-input').value; const start = document.getElementById('start-date-input').value;
+            const end = document.getElementById('end-date-input').value; if (!countyState || !start || !end) { return alert('Please fill in all fields.'); }
+            const [county, state] = countyState.split(',').map(s => s.trim()); if (!county || !state) { return alert('Please use "County, State" format (e.g., Tarrant, TX).'); }
+            const [startYear, startMonth, startDay] = start.split('-'); const [endYear, endMonth, endDay] = end.split('-');
+            const noaaUrl = `https://www.ncdc.noaa.gov/stormevents/listevents.jsp?eventType=HAIL&beginDate_mm=${startMonth}&beginDate_dd=${startDay}&beginDate_yyyy=${startYear}&endDate_mm=${endMonth}&endDate_dd=${endDay}&endDate_yyyy=${endYear}&county=${county.toUpperCase()}%3A${state.toUpperCase()}&hailfilter=1.00&sort=DT&submitbutton=Search`;
+            window.open(noaaUrl, '_blank');
+        });
         document.getElementById('use-location-btn').addEventListener('click', () => {
             if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
             showTemporaryMessage("Finding your location...");
