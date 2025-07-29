@@ -16,51 +16,29 @@
         #map { height: 100%; width: 100%; }
         .leaflet-popup-content-wrapper { border-radius: 8px; background-color: #f9fafb; }
         .leaflet-popup-content { margin: 15px; }
-        .popup-button-remove {
+        .popup-button {
             padding: 6px 12px; border-radius: 6px; border: none; color: white;
             font-size: 14px; cursor: pointer; margin-top: 10px; transition: background-color 0.2s;
-            background-color: #ef4444;
         }
+        .popup-button-remove { background-color: #ef4444; }
         .popup-button-remove:hover { background-color: #dc2626; }
+        .popup-button-storm { background-color: #f59e0b; }
+        .popup-button-storm:hover { background-color: #d97706; }
+
         .leaflet-top, .leaflet-bottom { z-index: 1000; }
         #storm-info-container, #address-list-panel-container, #cluster-slider-container, #top-right-controls { 
             transition: transform 0.3s ease-in-out, right 0.3s ease-in-out;
         }
         #storm-info-container.closed { transform: translateX(-100%); }
         
-        #address-list-panel-container.closed { 
-            transform: translateY(100%);
-        }
+        #address-list-panel-container.closed { transform: translateY(100%); }
         @media (min-width: 640px) {
-            #address-list-panel-container.closed {
-                transform: translateX(100%) translateY(0);
-            }
+            #address-list-panel-container.closed { transform: translateX(100%) translateY(0); }
         }
 
         input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; width: 100%; }
         input[type=range]::-webkit-slider-runnable-track { background: #e5e7eb; height: 0.5rem; border-radius: 0.25rem; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -4px; background-color: #3b82f6; height: 1.25rem; width: 1.25rem; border-radius: 9999px; }
-        
-        #storm-date-list details > summary {
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-weight: bold;
-            list-style: none;
-        }
-        #storm-date-list details > summary::-webkit-details-marker { display: none; }
-        #storm-date-list details > summary:before {
-            content: '►';
-            margin-right: 0.5rem;
-            display: inline-block;
-            transition: transform 0.2s;
-        }
-        #storm-date-list details[open] > summary:before {
-            transform: rotate(90deg);
-        }
-        #storm-date-list .storm-event-item {
-            padding-left: 1.75rem;
-        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,21 +47,7 @@
 <body>
 
     <div id="login-container" class="absolute inset-0 z-[3000] flex items-center justify-center bg-gray-100">
-        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1>
-            <p class="text-gray-500 mb-6">Sign in to access your map</p>
-            <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors mb-4">
-                <svg class="h-6 w-6" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-                <span class="text-gray-700 font-semibold">Sign in with Google</span>
-            </button>
-            <div class="relative my-4">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
-                <div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or with email</span></div>
-            </div>
-            <input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition mb-3">
-            <button id="email-signin-btn" class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Send Login Link</button>
-            <p id="email-message" class="text-green-600 text-sm mt-3 h-4"></p>
-        </div>
+        <div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg text-center"><h1 class="text-3xl font-bold text-gray-800 mb-2">Storm Inspector</h1><p class="text-gray-500 mb-6">Sign in to access your map</p><button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors mb-4"><svg class="h-6 w-6" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg><span class="text-gray-700 font-semibold">Sign in with Google</span></button><div class="relative my-4"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Or with email</span></div></div><input type="email" id="email-input" placeholder="Enter your email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition mb-3"><button id="email-signin-btn" class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition">Send Login Link</button><p id="email-message" class="text-green-600 text-sm mt-3 h-4"></p></div>
     </div>
     
     <div id="app-container" class="h-full w-full hidden">
@@ -118,42 +82,11 @@
             <div id="storm-date-panel" class="bg-white/90 backdrop-blur-sm p-4 rounded-r-lg shadow-lg w-72">
                 <div id="storm-list-view">
                     <h3 class="text-lg font-bold mb-2 text-gray-800">Storm Events</h3>
-                    <button id="use-location-btn" class="w-full mb-3 px-4 py-2 bg-gray-100 text-gray-800 text-sm font-semibold rounded-lg shadow-sm hover:bg-gray-200 transition flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Use My Location
+                    <button id="search-storms-btn" class="w-full mb-3 px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        Search My Location
                     </button>
                     <div id="storm-date-list" class="space-y-1 max-h-80 overflow-y-auto border-t pt-2"></div>
-                    <button id="show-input-view-btn" class="w-full mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-blue-700 transition">Add New Storm</button>
-                </div>
-                <div id="storm-input-view" class="hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-gray-800">Add Storm Data</h3>
-                        <button id="back-to-list-view-btn" class="text-sm font-semibold text-blue-600 hover:underline">Back</button>
-                    </div>
-                    <div class="space-y-3 text-sm">
-                        <div>
-                            <label for="county-input" class="block font-medium text-gray-700">County, State</label>
-                            <input type="text" id="county-input" placeholder="e.g., Tarrant, TX" class="mt-1 w-full px-3 py-2 rounded-md border border-gray-300">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label for="start-date-input" class="block font-medium text-gray-700">Start Date</label>
-                                <input type="date" id="start-date-input" class="mt-1 w-full px-3 py-2 rounded-md border border-gray-300">
-                            </div>
-                            <div>
-                                <label for="end-date-input" class="block font-medium text-gray-700">End Date</label>
-                                <input type="date" id="end-date-input" class="mt-1 w-full px-3 py-2 rounded-md border border-gray-300">
-                            </div>
-                        </div>
-                        <button id="generate-noaa-link-btn" class="w-full px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-sm hover:bg-gray-700 transition">Generate NOAA Link</button>
-                    </div>
-                    <div class="relative my-4"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div><div class="relative flex justify-center text-sm"><span class="bg-white px-2 text-gray-500">Then</span></div></div>
-                    <p class="text-xs text-center text-gray-600 mb-2">After generating the link, download the CSV, then paste its contents below.</p>
-                    <textarea id="storm-data-textarea" class="w-full h-24 p-2 border border-gray-300 rounded-md text-xs" placeholder="Paste CSV data here..."></textarea>
-                    <button id="process-storm-data-btn" class="w-full mt-3 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 transition">Add Pasted Data</button>
                 </div>
             </div>
             <div id="info-panel" class="mt-2 bg-white/90 backdrop-blur-sm p-3 rounded-r-lg shadow-lg hidden">
@@ -184,12 +117,8 @@
             </div>
         </div>
         
-        <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl text-center"><h3 class="text-xl font-bold mb-4">Are you sure?</h3><p class="text-gray-600 mb-6">This will remove all addresses from the map.</p><div class="flex justify-center gap-4"><button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button><button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button></div></div>
-        </div>
-        <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg"><h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div><div class="text-center text-gray-500">OR</div><div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div></div><div class="flex justify-end gap-4 mt-6"><button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button><button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button></div></div>
-        </div>
+        <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden"></div>
+        <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -218,8 +147,6 @@
         let map;
         let currentUser = null;
         let stormDataCollection = [];
-        let markers = L.markerClusterGroup({ maxClusterRadius: 80 });
-        let swathLayer = L.layerGroup();
         let tempLocationMarker = null;
         const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
         let suggestionTimeout;
@@ -230,7 +157,42 @@
         const db = firebase.firestore();
         const functions = firebase.app().functions('us-central1');
 
+        // --- Marker Icons & Cluster Group ---
+        const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const purpleIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        
+        window.pieChartIconCreateFunction = function (cluster) {
+            const children = cluster.getAllChildMarkers();
+            let damaged = 0, noDamage = 0, review = 0, notInspected = 0;
+            children.forEach(marker => {
+                const status = marker.options.inspectionStatus;
+                if (!status.inspected) notInspected++;
+                else if (status.damage === 'damaged') damaged++;
+                else if (status.damage === 'no_damage') noDamage++;
+                else if (status.damage === 'review') review++;
+            });
+            const total = children.length;
+            const damPercent = (damaged / total) * 360;
+            const noDamPercent = (noDamage / total) * 360;
+            const revPercent = (review / total) * 360;
+            const conicGradient = `conic-gradient(#22c55e 0 ${damPercent}deg, #ef4444 ${damPercent}deg ${damPercent + noDamPercent}deg, #eab308 ${damPercent + noDamPercent}deg ${damPercent + noDamPercent + revPercent}deg, #3b82f6 ${damPercent + noDamPercent + revPercent}deg 360deg)`;
+            const size = total < 100 ? 40 : 50;
+            const html = `<div style="background: ${conicGradient};" class="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">${total}</div>`;
+            return L.divIcon({ html: html, className: 'marker-cluster', iconSize: L.point(size, size) });
+        };
+
+        let markers = L.markerClusterGroup({ 
+            maxClusterRadius: 80,
+            disableClusteringAtZoom: 19,
+            iconCreateFunction: window.pieChartIconCreateFunction
+        });
+        let swathLayer = L.layerGroup();
+        
         // --- UI Element References ---
+        // (Defined globally for easy access)
         const loginContainer = document.getElementById('login-container');
         const appContainer = document.getElementById('app-container');
         const googleSigninBtn = document.getElementById('google-signin-btn');
@@ -243,8 +205,8 @@
         const uploadBtnDesktop = document.getElementById('upload-btn-desktop');
         const uploadBtnMobile = document.getElementById('upload-btn-mobile');
         const toggleAddressListBtn = document.getElementById('toggle-address-list-btn');
-
-        // --- Map Initialization Function ---
+        
+        // --- Map Initialization ---
         function initializeMap() {
             if (map) return;
             map = L.map('map', { zoomControl: false }).setView([33.88, -98.55], 8);
@@ -298,13 +260,6 @@
                 .catch(error => console.error(error)); 
         }
 
-        // --- Marker Icons ---
-        const blueIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const greenIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const purpleIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        
         // --- Firestore Data Functions ---
         async function loadMarkersFromFirestore() {
             if (!currentUser) return;
@@ -367,13 +322,12 @@
             }
         }
         function displaySuggestions(s) {
-            const suggestionsEl = document.getElementById('address-suggestions');
             if (s.length === 0) {
-                suggestionsEl.innerHTML = '<div class="p-3 text-gray-500">No results found.</div>';
+                addressSuggestions.innerHTML = '<div class="p-3 text-gray-500">No results found.</div>';
             } else {
-                suggestionsEl.innerHTML = s.slice(0, 5).map(i => `<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');
+                addressSuggestions.innerHTML = s.slice(0, 5).map(i => `<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');
             }
-            suggestionsEl.classList.remove('hidden');
+            addressSuggestions.classList.remove('hidden');
         }
         async function reverseGeocode(lat, lon) {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
@@ -408,7 +362,7 @@
             const status = opt.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
             const popup = opt.shouldOpenPopup !== false;
             const marker = L.marker([lat, lon], { id: id, address: name, inspectionStatus: status });
-            marker.bindPopup(() => createPopupContent(id, name));
+            marker.bindPopup(() => createPopupContent(id, name, lat, lon));
             marker.on('popupopen', () => populatePopup(id, marker.options.inspectionStatus));
             markers.addLayer(marker);
             updateMarkerIcon(marker);
@@ -419,8 +373,19 @@
             }
             updateAddressRemovalList();
         }
-        function createPopupContent(id, name) {
-            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div><button class="popup-button-remove" onclick="removeMarker('${id}')">Remove</button></div>`;
+        function createPopupContent(id, name, lat, lon) {
+            return `<div class="space-y-3">
+                <p class="font-bold text-gray-800">${name}</p>
+                <div class="border-t pt-2 space-y-2">
+                    <div><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div>
+                    <div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div>
+                    <div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div>
+                </div>
+                <div class="border-t pt-2 flex flex-col space-y-2">
+                    <button class="popup-button popup-button-storm" onclick="window.getStormsForMarker(${lat}, ${lon})">Get Storm Data</button>
+                    <button class="popup-button popup-button-remove" onclick="removeMarker('${id}')">Remove Address</button>
+                </div>
+            </div>`;
         }
         function populatePopup(id, s) {
             document.getElementById(`inspected-${id}`).checked = s.inspected;
@@ -488,15 +453,46 @@
         window.zoomToMarker = function(id) { markers.eachLayer(l => { if (l.options.id === id) markers.zoomToShowLayer(l, () => l.openPopup()); }); }
         
         // --- Storm Data Logic ---
+        function convertJsonToCsv(jsonData) {
+            const headers = "ZTIME,CELL_ID,MAXSIZE,LAT,LON";
+            const rows = jsonData.results.map(event => 
+                `${event.ZTIME},${event.CELL_ID},${event.MAXSIZE},${event.LAT},${event.LON}`
+            );
+            return `${headers}\n${rows.join('\n')}`;
+        }
+        async function fetchAndProcessStormData(lat, lon) {
+            showTemporaryMessage("Searching for recent storms...");
+            try {
+                const getSwdiEvents = functions.httpsCallable('getSwdiEvents');
+                const result = await getSwdiEvents({ lat, lon });
+
+                if (result.data.resultCount === 0) {
+                    return showTemporaryMessage("No recent hail events found for this location.");
+                }
+
+                const csvString = convertJsonToCsv(result.data);
+                processNewStormData(csvString);
+                showTemporaryMessage(`Found ${result.data.resultCount} storm events!`);
+            } catch (error) {
+                console.error("Error calling getSwdiEvents function:", error);
+                alert("An error occurred while fetching storm data. Please check the console.");
+            }
+        }
+        window.getStormsForMarker = function(lat, lon) {
+            fetchAndProcessStormData(lat, lon);
+            map.closePopup();
+        }
         function processNewStormData(csvText) {
             if (!csvText.trim()) return alert("No data to process.");
             const tempStormData = parseCsv(csvText);
-            const firstRow = tempStormData.find(row => row.CZ_NAME && row.CZ_NAME !== 'NA');
-            if (!firstRow) return alert("Could not read location data from CSV. Please use a CSV from the NOAA Storm Events website.");
-            const date = firstRow.BEGIN_DATE_TIME.split(' ')[0];
-            const locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
-            const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAGNITUDE || 0)));
-            const id = `${date}_${locationName.replace(/, | /g, '_')}`;
+            const firstRow = tempStormData[0];
+            if (!firstRow || !firstRow.ZTIME) { return alert("Could not read date from storm data."); }
+            
+            const date = firstRow.ZTIME.split('T')[0];
+            const locationName = `Storm of ${date}`; // Generic name, as CSV lacks county info
+            const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAXSIZE || 0)));
+            const id = `${date}_${firstRow.LAT}_${firstRow.LON}`;
+
             const newStorm = { id, locationName, date, maxHail, csvText };
             if (!stormDataCollection.some(storm => storm.id === id)) {
                 stormDataCollection.push(newStorm);
@@ -508,24 +504,8 @@
             populateStormDatePanel();
             swathLayer.clearLayers();
             document.getElementById('info-panel').classList.add('hidden');
-            document.getElementById('storm-input-view').classList.add('hidden');
-            document.getElementById('storm-list-view').classList.remove('hidden');
         }
-        function parseCsv(t) {
-            const lines = t.trim().split('\n');
-            let all = [], h = [];
-            lines.forEach(l => {
-                if (l.toLowerCase().includes('begin_date_time')) {
-                    h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase());
-                    return;
-                }
-                if (!l.includes(',') || h.length === 0) return;
-                const v = l.split(',');
-                const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].replace(/"/g, '').trim() : ''; return o; }, {});
-                all.push(p);
-            });
-            return all;
-        }
+        function parseCsv(t) {const lines = t.trim().split('\n'); let all = [], h = []; lines.forEach(l => { if (l.toLowerCase().startsWith('ztime')) { h = l.split(',').map(v => v.trim().toUpperCase()); return; } if (!l.includes(',') || h.length === 0) return; const v = l.split(','); const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].trim() : ''; return o; }, {}); all.push(p); }); return all;}
         function populateStormDatePanel() {
             const dateList = document.getElementById('storm-date-list');
             if (stormDataCollection.length === 0) {
@@ -538,7 +518,7 @@
             }, {});
             let html = '';
             for (const location in groupedByLocation) {
-                html += `<details><summary>${location}</summary><div class="storm-event-item">`;
+                html += `<details open><summary>${location}</summary><div class="storm-event-item">`;
                 groupedByLocation[location].sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(storm => {
                     html += `<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${storm.id}"><span class="ml-2 text-gray-700">${storm.date} (${storm.maxHail.toFixed(2)}" hail)</span></label>`;
                 });
@@ -559,32 +539,17 @@
                 const storm = stormDataCollection.find(s => s.id === id);
                 if (!storm) return;
                 const color = stormColors[index % stormColors.length];
-                const pointsForDate = parseCsv(storm.csvText).filter(p => p.MAGNITUDE && parseFloat(p.MAGNITUDE) > 0);
+                const pointsForDate = parseCsv(storm.csvText).filter(p => p.MAXSIZE && parseFloat(p.MAXSIZE) > 0);
                 drawHailSwath(pointsForDate, color);
                 if (pointsForDate.length > 0) {
                     infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${storm.date} - ${storm.locationName} (${storm.maxHail.toFixed(2)}")</span></div>`;
                 }
             });
         }
-        function drawHailSwath(p, c) {
-            if (p.length === 0) return;
-            if (p.length < 3) {
-                p.forEach(i => L.circle([parseFloat(i.BEGIN_LAT), parseFloat(i.BEGIN_LON)], { radius: 1609, color: c, weight: 1, opacity: 0.7, fillColor: c, fillOpacity: 0.2 }).addTo(swathLayer));
-                return;
-            };
-            const tP = p.map(i => turf.point([parseFloat(i.BEGIN_LON), parseFloat(i.BEGIN_LAT)]));
-            const hull = turf.convex(turf.featureCollection(tP));
-            if (hull) {
-                const b1 = turf.buffer(hull, 1, { units: 'miles' });
-                const b2 = turf.buffer(hull, 2, { units: 'miles' });
-                L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer);
-                L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer);
-                L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer);
-            }
-        }
+        function drawHailSwath(p, c) { if(p.length === 0) return; if (p.length < 3) { p.forEach(i => L.circle([parseFloat(i.LAT),parseFloat(i.LON)],{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer)); return; }; const tP = p.map(i => turf.point([parseFloat(i.LON), parseFloat(i.LAT)])); const hull = turf.convex(turf.featureCollection(tP)); if (hull) { const b1 = turf.buffer(hull, 1, { units: 'miles' }); const b2 = turf.buffer(hull, 2, { units: 'miles' }); L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer); L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer); L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer); } }
 
         // --- Event Listeners for UI controls ---
-        document.getElementById('remove-selected-btn').addEventListener('click', () => { const r = document.querySelector('#address-list-content input:checked'); if (r) removeMarker(r.value); });
+        document.getElementById('remove-selected-btn').addEventListener('click', () => { const r=document.querySelector('#address-list-content input:checked'); if (r) removeMarker(r.value); });
         document.getElementById('remove-all-btn').addEventListener('click', () => document.getElementById('confirmation-modal').classList.remove('hidden'));
         document.getElementById('confirm-remove').addEventListener('click', () => { removeAllMarkersFromFirestore(); markers.clearLayers(); updateAddressRemovalList(); document.getElementById('confirmation-modal').classList.add('hidden'); });
         document.getElementById('cancel-remove').addEventListener('click', () => document.getElementById('confirmation-modal').classList.add('hidden'));
@@ -604,13 +569,12 @@
         });
         document.getElementById('cluster-slider').addEventListener('input', (e) => {
             if (!map) return; const newRadius = parseInt(e.target.value, 10); const allLayers = markers.getLayers();
-            map.removeLayer(markers); markers = L.markerClusterGroup({ maxClusterRadius: newRadius }); markers.addLayers(allLayers); map.addLayer(markers);
+            map.removeLayer(markers); markers = L.markerClusterGroup({ maxClusterRadius: newRadius, disableClusteringAtZoom: 19, iconCreateFunction: window.pieChartIconCreateFunction }); markers.addLayers(allLayers); map.addLayer(markers);
         });
         document.querySelectorAll('input[name="filter"]').forEach(c => c.addEventListener('change', updateAddressRemovalList));
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
         document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
-        document.getElementById('storm-file-upload').addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = function(ev) { const t = ev.target.result; document.getElementById('storm-data-textarea').value = t; processNewStormData(t); }; r.readAsText(f); e.target.value = ''; });
         document.getElementById('generate-noaa-link-btn').addEventListener('click', () => {
             const countyState = document.getElementById('county-input').value; const start = document.getElementById('start-date-input').value;
             const end = document.getElementById('end-date-input').value; if (!countyState || !start || !end) { return alert('Please fill in all fields.'); }
@@ -618,6 +582,12 @@
             const [startYear, startMonth, startDay] = start.split('-'); const [endYear, endMonth, endDay] = end.split('-');
             const noaaUrl = `https://www.ncdc.noaa.gov/stormevents/listevents.jsp?eventType=HAIL&beginDate_mm=${startMonth}&beginDate_dd=${startDay}&beginDate_yyyy=${startYear}&endDate_mm=${endMonth}&endDate_dd=${endDay}&endDate_yyyy=${endYear}&county=${county.toUpperCase()}%3A${state.toUpperCase()}&hailfilter=1.00&sort=DT&submitbutton=Search`;
             window.open(noaaUrl, '_blank');
+        });
+        document.getElementById('search-storms-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
+            navigator.geolocation.getCurrentPosition(position => {
+                fetchAndProcessStormData(position.coords.latitude, position.coords.longitude);
+            }, () => showTemporaryMessage("Could not get your location."));
         });
         document.getElementById('use-location-btn').addEventListener('click', () => {
             if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
@@ -644,77 +614,11 @@
         });
         
         // --- Mass Upload Logic ---
-        async function handleUpload() {
-            const fileUploadInput = document.getElementById('file-upload'); const textUploadArea = document.getElementById('text-upload');
-            const file = fileUploadInput.files[0]; const text = textUploadArea.value; let addresses = [];
-            if (file) addresses = await parseFile(file);
-            else if (text.trim()) addresses = text.trim().split('\n').filter(l => l.trim() !== '');
-            if (addresses.length === 0) return alert("No addresses found.");
-            document.getElementById('upload-modal').classList.add('hidden'); fileUploadInput.value = ''; textUploadArea.value = '';
-            showTemporaryMessage("Loading Addresses..."); await processAddressList(addresses);
-        }
-        function showTemporaryMessage(m) {
-            const d = document.createElement('div');
-            d.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';
-            d.textContent = m;
-            document.body.appendChild(d);
-            setTimeout(() => {
-                d.classList.add('opacity-0');
-                setTimeout(() => d.remove(), 500);
-            }, 6000);
-        }
-        function parseFile(f) {
-            return new Promise((res, rej) => {
-                const r = new FileReader();
-                r.onload = e => {
-                    const c = e.target.result;
-                    if (f.name.endsWith('.csv') || f.name.endsWith('.txt')) {
-                        res(c.trim().split('\n').filter(l => l.trim() !== ''));
-                    } else if (f.name.endsWith('.xlsx')) {
-                        const w = XLSX.read(c, { type: 'binary' });
-                        const sN = w.SheetNames[0];
-                        const s = w.Sheets[sN];
-                        const j = XLSX.utils.sheet_to_json(s, { header: 1 });
-                        res(j.map(row => row[0]).filter(a => a));
-                    } else {
-                        rej(new Error("Unsupported file type."));
-                    }
-                };
-                r.onerror = err => rej(err);
-                r.readAsBinaryString(f);
-            });
-        }
-        async function processAddressList(a) {
-            const sI = createStatusIndicator();
-            if (!sI) return;
-            for (let i = 0; i < a.length; i++) {
-                sI.textContent = `Loading Address ${i + 1} of ${a.length}...`;
-                try {
-                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;
-                    const r = await fetch(url);
-                    const d = await r.json();
-                    if (d && d.length > 0) {
-                        const { lat, lon, display_name } = d[0];
-                        addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
-                    } else console.warn(`Could not geocode: ${a[i]}`);
-                } catch (e) {
-                    console.error(`Error geocoding ${a[i]}:`, e);
-                }
-                await new Promise(res => setTimeout(res, 100));
-            }
-            sI.textContent = 'Done!';
-            sI.classList.remove('bg-yellow-500');
-            sI.classList.add('bg-green-500');
-            setTimeout(() => sI.remove(), 3000);
-            if (markers.getLayers().length > 0) map.fitBounds(markers.getBounds(), { padding: [50, 50] });
-        }
-        function createStatusIndicator() {
-            if (document.getElementById('app-container').classList.contains('hidden')) return null;
-            const i = document.createElement('div');
-            i.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
-            document.getElementById('top-right-controls').appendChild(i);
-            return i;
-        }
+        async function handleUpload() {const fI=document.getElementById('file-upload');const tA=document.getElementById('text-upload');const f=fI.files[0];const t=tA.value;let a=[];if(f)a=await parseFile(f);else if(t.trim())a=t.trim().split('\n').filter(l=>l.trim()!=='');if(a.length===0)return alert("No addresses found.");document.getElementById('upload-modal').classList.add('hidden');fI.value='';tA.value='';showTemporaryMessage("Loading Addresses...");await processAddressList(a);}
+        function showTemporaryMessage(m){const d=document.createElement('div');d.className='fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';d.textContent=m;document.body.appendChild(d);setTimeout(()=>{d.classList.add('opacity-0');setTimeout(()=>d.remove(),500);},6000);}
+        function parseFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const c=e.target.result;if(f.name.endsWith('.csv')||f.name.endsWith('.txt')){res(c.trim().split('\n').filter(l=>l.trim()!==''));}else if(f.name.endsWith('.xlsx')){const w=XLSX.read(c,{type:'binary'});const sN=w.SheetNames[0];const s=w.Sheets[sN];const j=XLSX.utils.sheet_to_json(s,{header:1});res(j.map(row=>row[0]).filter(a=>a));}else{rej(new Error("Unsupported file type."));}};r.onerror=err=>rej(err);r.readAsBinaryString(f);});}
+        async function processAddressList(a){const sI=createStatusIndicator();if(!sI)return;for(let i=0;i<a.length;i++){sI.textContent=`Loading Address ${i+1} of ${a.length}...`;try{const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;const r=await fetch(url);const d=await r.json();if(d&&d.length>0){const{lat,lon,display_name}=d[0];addMarker(parseFloat(lat),parseFloat(lon),display_name,{shouldOpenPopup:false});}else console.warn(`Could not geocode: ${a[i]}`);}catch(e){console.error(`Error geocoding ${a[i]}:`,e);}await new Promise(res=>setTimeout(res,100));}sI.textContent='Done!';sI.classList.remove('bg-yellow-500');sI.classList.add('bg-green-500');setTimeout(()=>sI.remove(),3000);if(markers.getLayers().length>0)map.fitBounds(markers.getBounds(),{padding:[50,50]});}
+        function createStatusIndicator(){if(document.getElementById('app-container').classList.contains('hidden'))return null;const i=document.createElement('div');i.className='px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';document.getElementById('top-right-controls').appendChild(i);return i;}
     </script>
 </body>
 </html>
