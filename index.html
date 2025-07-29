@@ -185,28 +185,10 @@
         </div>
         
         <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl text-center">
-                <h3 class="text-xl font-bold mb-4">Are you sure?</h3>
-                <p class="text-gray-600 mb-6">This will remove all addresses from the map.</p>
-                <div class="flex justify-center gap-4">
-                    <button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button>
-                    <button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-                </div>
-            </div>
+             <div class="bg-white p-8 rounded-lg shadow-xl text-center"><h3 class="text-xl font-bold mb-4">Are you sure?</h3><p class="text-gray-600 mb-6">This will remove all addresses from the map.</p><div class="flex justify-center gap-4"><button id="confirm-remove" class="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Yes, Remove All</button><button id="cancel-remove" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button></div></div>
         </div>
         <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden">
-             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg">
-                <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3>
-                <div class="space-y-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div>
-                    <div class="text-center text-gray-500">OR</div>
-                    <div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div>
-                </div>
-                <div class="flex justify-end gap-4 mt-6">
-                    <button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button>
-                    <button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button>
-                </div>
-            </div>
+             <div class="bg-white p-8 rounded-lg shadow-xl w-11/12 max-w-lg"><h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Upload Multiple Addresses</h3><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Upload File (.csv, .xlsx, .txt)</label><input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" accept=".csv,.xlsx,.txt"></div><div class="text-center text-gray-500">OR</div><div><label for="text-upload" class="block text-sm font-medium text-gray-700 mb-1">Paste Addresses (one per line)</label><textarea id="text-upload" rows="5" class="w-full p-2 border border-gray-300 rounded-md"></textarea></div></div><div class="flex justify-end gap-4 mt-6"><button id="cancel-upload" class="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">Cancel</button><button id="confirm-upload" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">Start Upload</button></div></div>
         </div>
     </div>
 
@@ -322,30 +304,187 @@
         const redIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
         const yellowIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
         const purpleIcon = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        
+
         // --- Firestore Data Functions ---
-        async function loadMarkersFromFirestore() { if (!currentUser) return; markers.clearLayers(); try { const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get(); querySnapshot.forEach(doc => { const d = doc.data(); addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, shouldOpenPopup: false, source: 'firestore' }); }); } catch (e) { console.error("Error loading markers:", e); } updateAddressRemovalList(); }
-        async function saveMarkerToFirestore(d) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); } }
-        async function removeMarkerFromFirestore(id) { if (!currentUser) return; try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); } }
-        async function removeAllMarkersFromFirestore() { if (!currentUser) return; const q = await db.collection('users').doc(currentUser.uid).collection('markers').get(); const batch = db.batch(); q.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
-        async function loadStormDataFromFirestore() { if (!currentUser) return; try { const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents'); const doc = await docRef.get(); if (doc.exists && doc.data().collection) { stormDataCollection = doc.data().collection; } else { stormDataCollection = []; } } catch (error) { console.error("Error loading storm data:", error); stormDataCollection = []; } populateStormDatePanel(); }
+        async function loadMarkersFromFirestore() {
+            if (!currentUser) return;
+            markers.clearLayers();
+            try {
+                const querySnapshot = await db.collection('users').doc(currentUser.uid).collection('markers').get();
+                querySnapshot.forEach(doc => {
+                    const d = doc.data();
+                    addMarker(d.lat, d.lon, d.address, { id: d.id, inspectionStatus: d.inspectionStatus, shouldOpenPopup: false, source: 'firestore' });
+                });
+            } catch (e) { console.error("Error loading markers:", e); }
+            updateAddressRemovalList();
+        }
+        async function saveMarkerToFirestore(d) {
+            if (!currentUser) return;
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(d.id).set(d); } catch (e) { console.error("Error saving marker:", e); }
+        }
+        async function removeMarkerFromFirestore(id) {
+            if (!currentUser) return;
+            try { await db.collection('users').doc(currentUser.uid).collection('markers').doc(id).delete(); } catch (e) { console.error("Error removing marker:", e); }
+        }
+        async function removeAllMarkersFromFirestore() {
+            if (!currentUser) return;
+            const q = await db.collection('users').doc(currentUser.uid).collection('markers').get();
+            const batch = db.batch();
+            q.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        async function loadStormDataFromFirestore() {
+            if (!currentUser) return;
+            try {
+                const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents');
+                const doc = await docRef.get();
+                if (doc.exists && doc.data().collection) {
+                    stormDataCollection = doc.data().collection;
+                } else {
+                    stormDataCollection = [];
+                }
+            } catch (error) {
+                console.error("Error loading storm data:", error);
+                stormDataCollection = [];
+            }
+            populateStormDatePanel();
+        }
         
         // --- Address Search & Geocoding ---
-        async function fetchAddressSuggestions(q) { if(q.length<3){document.getElementById('address-suggestions').innerHTML='';document.getElementById('address-suggestions').classList.add('hidden');return;}const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us`;try{const r=await fetch(url);const d=await r.json();displaySuggestions(d);}catch(e){console.error('Error fetching suggestions:',e);}}
-        function displaySuggestions(s) { const suggestionsEl = document.getElementById('address-suggestions'); if(s.length===0){suggestionsEl.innerHTML='<div class="p-3 text-gray-500">No results found.</div>';}else{suggestionsEl.innerHTML=s.slice(0,5).map(i=>`<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');}suggestionsEl.classList.remove('hidden');}
-        async function reverseGeocode(lat, lon) { const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`; try { const response = await fetch(url); const data = await response.json(); return data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`; } catch (error) { console.error("Reverse geocoding error:", error); return `${lat.toFixed(4)}, ${lon.toFixed(4)}`; } }
-        document.getElementById('address-input').addEventListener('keyup', (e)=>{clearTimeout(suggestionTimeout);suggestionTimeout=setTimeout(()=>fetchAddressSuggestions(e.target.value),300);});
-        document.getElementById('address-suggestions').addEventListener('click',(e)=>{const s=e.target.closest('div');if(s){const lat=parseFloat(s.dataset.lat);const lon=parseFloat(s.dataset.lon);const name=s.dataset.name;addMarker(lat,lon,name);document.getElementById('address-input').value='';document.getElementById('address-suggestions').classList.add('hidden');}});
+        async function fetchAddressSuggestions(q) {
+            if (q.length < 3) {
+                addressSuggestions.innerHTML = '';
+                addressSuggestions.classList.add('hidden');
+                return;
+            }
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=us`;
+            try {
+                const r = await fetch(url);
+                const d = await r.json();
+                displaySuggestions(d);
+            } catch (e) {
+                console.error('Error fetching suggestions:', e);
+            }
+        }
+        function displaySuggestions(s) {
+            if (s.length === 0) {
+                addressSuggestions.innerHTML = '<div class="p-3 text-gray-500">No results found.</div>';
+            } else {
+                addressSuggestions.innerHTML = s.slice(0, 5).map(i => `<div class="p-3 hover:bg-blue-100 cursor-pointer" data-lat="${i.lat}" data-lon="${i.lon}" data-name="${i.display_name}">${i.display_name}</div>`).join('');
+            }
+            addressSuggestions.classList.remove('hidden');
+        }
+        async function reverseGeocode(lat, lon) {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            } catch (error) {
+                console.error("Reverse geocoding error:", error);
+                return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            }
+        }
+        addressInput.addEventListener('keyup', (e) => {
+            clearTimeout(suggestionTimeout);
+            suggestionTimeout = setTimeout(() => fetchAddressSuggestions(e.target.value), 300);
+        });
+        addressSuggestions.addEventListener('click', (e) => {
+            const s = e.target.closest('div');
+            if (s) {
+                const lat = parseFloat(s.dataset.lat);
+                const lon = parseFloat(s.dataset.lon);
+                const name = s.dataset.name;
+                addMarker(lat, lon, name);
+                addressInput.value = '';
+                addressSuggestions.classList.add('hidden');
+            }
+        });
 
         // --- Marker Management & UI Logic ---
-        function addMarker(lat,lon,name,opt={}){const id=opt.id||`marker-${Date.now()}`;const status=opt.inspectionStatus||{inspected:false,damage:'none',photoLink:''};const popup=opt.shouldOpenPopup!==false;const marker=L.marker([lat,lon],{id:id,address:name,inspectionStatus:status});marker.bindPopup(()=>createPopupContent(id,name));marker.on('popupopen',()=>populatePopup(id,marker.options.inspectionStatus));markers.addLayer(marker);updateMarkerIcon(marker);if(popup)markers.zoomToShowLayer(marker,()=>marker.openPopup());if(opt.source!=='firestore'){const data={lat,lon,id,address:name,inspectionStatus:status};saveMarkerToFirestore(data);}updateAddressRemovalList();}
-        function createPopupContent(id,name){return`<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div><button class="popup-button-remove" onclick="removeMarker('${id}')">Remove</button></div>`;}
-        function populatePopup(id,s){document.getElementById(`inspected-${id}`).checked=s.inspected;document.getElementById(`photo-link-${id}`).value=s.photoLink;const r=document.querySelectorAll(`input[name="damage-${id}"]`);r.forEach(radio=>{radio.disabled=!s.inspected;if(radio.value===s.damage)radio.checked=true;});}
-        window.updateMarkerStatus=function(id){markers.eachLayer(l=>{if(l.options.id===id){const insp=document.getElementById(`inspected-${id}`).checked;const link=document.getElementById(`photo-link-${id}`).value;let dmg='none';if(insp){const sel=document.querySelector(`input[name="damage-${id}"]:checked`);if(sel)dmg=sel.value;}l.options.inspectionStatus={inspected:insp,damage:dmg,photoLink:link};updateMarkerIcon(l);document.querySelectorAll(`input[name="damage-${id}"]`).forEach(r=>r.disabled=!insp);const d={lat:l.getLatLng().lat,lon:l.getLatLng().lng,id:l.options.id,address:l.options.address,inspectionStatus:l.options.inspectionStatus};saveMarkerToFirestore(d);updateAddressRemovalList();}});}
-        function updateMarkerIcon(m){const s=m.options.inspectionStatus;if(!s.inspected)m.setIcon(blueIcon);else{switch(s.damage){case'damaged':m.setIcon(greenIcon);break;case'no_damage':m.setIcon(redIcon);break;case'review':m.setIcon(yellowIcon);break;default:m.setIcon(blueIcon);}}}
-        window.removeMarker=function(id){markers.eachLayer(l=>{if(l.options.id===id)markers.removeLayer(l);});removeMarkerFromFirestore(id);updateAddressRemovalList();}
-        function updateAddressRemovalList(){const layers=markers.getLayers();const panel=document.getElementById('address-list-panel-container');const btn=document.getElementById('toggle-address-list-btn');const content=document.getElementById('address-list-content');const filters={inspected:document.querySelector('input[name="filter"][value="inspected"]')?.checked,not_inspected:document.querySelector('input[name="filter"][value="not_inspected"]')?.checked,damaged:document.querySelector('input[name="filter"][value="damaged"]')?.checked,no_damage:document.querySelector('input[name="filter"][value="no_damage"]')?.checked,review:document.querySelector('input[name="filter"][value="review"]')?.checked,};const filteredLayers=layers.filter(l=>{const s=l.options.inspectionStatus;const iF=(filters.inspected&&s.inspected)||(filters.not_inspected&&!s.inspected)||(!filters.inspected&&!filters.not_inspected);if(!iF)return false;const dF=['damaged','no_damage','review'].filter(v=>filters[v]);if(dF.length>0&&!dF.includes(s.damage))return false;return true;});if(layers.length>0){btn.classList.remove('hidden');content.innerHTML=filteredLayers.map(l=>`<div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')"><input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2"><span class="text-xs truncate">${l.options.address}</span></div>`).join('');}else{btn.classList.add('hidden');if(!panel.classList.contains('closed')){btn.click();}content.innerHTML='';}}
-        window.zoomToMarker=function(id){markers.eachLayer(l=>{if(l.options.id===id)markers.zoomToShowLayer(l,()=>l.openPopup());});}
+        function addMarker(lat, lon, name, opt = {}) {
+            const id = opt.id || `marker-${Date.now()}`;
+            const status = opt.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
+            const popup = opt.shouldOpenPopup !== false;
+            const marker = L.marker([lat, lon], { id: id, address: name, inspectionStatus: status });
+            marker.bindPopup(() => createPopupContent(id, name));
+            marker.on('popupopen', () => populatePopup(id, marker.options.inspectionStatus));
+            markers.addLayer(marker);
+            updateMarkerIcon(marker);
+            if (popup) markers.zoomToShowLayer(marker, () => marker.openPopup());
+            if (opt.source !== 'firestore') {
+                const data = { lat, lon, id, address: name, inspectionStatus: status };
+                saveMarkerToFirestore(data);
+            }
+            updateAddressRemovalList();
+        }
+        function createPopupContent(id, name) {
+            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2"><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div><button class="popup-button-remove" onclick="removeMarker('${id}')">Remove</button></div>`;
+        }
+        function populatePopup(id, s) {
+            document.getElementById(`inspected-${id}`).checked = s.inspected;
+            document.getElementById(`photo-link-${id}`).value = s.photoLink;
+            const r = document.querySelectorAll(`input[name="damage-${id}"]`);
+            r.forEach(radio => {
+                radio.disabled = !s.inspected;
+                if (radio.value === s.damage) radio.checked = true;
+            });
+        }
+        window.updateMarkerStatus = function(id) {
+            markers.eachLayer(l => {
+                if (l.options.id === id) {
+                    const insp = document.getElementById(`inspected-${id}`).checked;
+                    const link = document.getElementById(`photo-link-${id}`).value;
+                    let dmg = 'none';
+                    if (insp) {
+                        const sel = document.querySelector(`input[name="damage-${id}"]:checked`);
+                        if (sel) dmg = sel.value;
+                    }
+                    l.options.inspectionStatus = { inspected: insp, damage: dmg, photoLink: link };
+                    updateMarkerIcon(l);
+                    document.querySelectorAll(`input[name="damage-${id}"]`).forEach(r => r.disabled = !insp);
+                    const d = { lat: l.getLatLng().lat, lon: l.getLatLng().lng, id: l.options.id, address: l.options.address, inspectionStatus: l.options.inspectionStatus };
+                    saveMarkerToFirestore(d);
+                    updateAddressRemovalList();
+                }
+            });
+        }
+        function updateMarkerIcon(m) {
+            const s = m.options.inspectionStatus;
+            if (!s.inspected) m.setIcon(blueIcon);
+            else {
+                switch (s.damage) {
+                    case 'damaged': m.setIcon(greenIcon); break;
+                    case 'no_damage': m.setIcon(redIcon); break;
+                    case 'review': m.setIcon(yellowIcon); break;
+                    default: m.setIcon(blueIcon);
+                }
+            }
+        }
+        window.removeMarker = function(id) {
+            markers.eachLayer(l => {
+                if (l.options.id === id) markers.removeLayer(l);
+            });
+            removeMarkerFromFirestore(id);
+            updateAddressRemovalList();
+        }
+        function updateAddressRemovalList() {
+            const layers = markers.getLayers();
+            const panel = document.getElementById('address-list-panel-container');
+            const btn = document.getElementById('toggle-address-list-btn');
+            const content = document.getElementById('address-list-content');
+            const filters = { inspected: document.querySelector('input[name="filter"][value="inspected"]')?.checked, not_inspected: document.querySelector('input[name="filter"][value="not_inspected"]')?.checked, damaged: document.querySelector('input[name="filter"][value="damaged"]')?.checked, no_damage: document.querySelector('input[name="filter"][value="no_damage"]')?.checked, review: document.querySelector('input[name="filter"][value="review"]')?.checked, };
+            const filteredLayers = layers.filter(l => { const s = l.options.inspectionStatus; const iF = (filters.inspected && s.inspected) || (filters.not_inspected && !s.inspected) || (!filters.inspected && !filters.not_inspected); if (!iF) return false; const dF = ['damaged', 'no_damage', 'review'].filter(v => filters[v]); if (dF.length > 0 && !dF.includes(s.damage)) return false; return true; });
+            if (layers.length > 0) {
+                btn.classList.remove('hidden');
+                content.innerHTML = filteredLayers.map(l => `<div class="p-1 rounded hover:bg-gray-200 cursor-pointer flex items-center" onclick="zoomToMarker('${l.options.id}')"><input type="radio" name="address-to-remove" value="${l.options.id}" class="h-4 w-4 mr-2"><span class="text-xs truncate">${l.options.address}</span></div>`).join('');
+            } else {
+                btn.classList.add('hidden');
+                if (!panel.classList.contains('closed')) { btn.click(); }
+                content.innerHTML = '';
+            }
+        }
+        window.zoomToMarker = function(id) { markers.eachLayer(l => { if (l.options.id === id) markers.zoomToShowLayer(l, () => l.openPopup()); }); }
         
         // --- Storm Data Logic ---
         function processNewStormData(csvText) {
@@ -353,18 +492,14 @@
             const tempStormData = parseCsv(csvText);
             const firstRow = tempStormData.find(row => row.CZ_NAME && row.CZ_NAME !== 'NA');
             if (!firstRow) return alert("Could not read location data from CSV. Please use a CSV from the NOAA Storm Events website.");
-            
             const date = firstRow.BEGIN_DATE_TIME.split(' ')[0];
             const locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
             const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAGNITUDE || 0)));
             const id = `${date}_${locationName.replace(/, | /g, '_')}`;
-
             const newStorm = { id, locationName, date, maxHail, csvText };
-
             if (!stormDataCollection.some(storm => storm.id === id)) {
                 stormDataCollection.push(newStorm);
             }
-            
             if (currentUser) {
                 const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents');
                 docRef.set({ collection: stormDataCollection });
@@ -375,9 +510,42 @@
             document.getElementById('storm-input-view').classList.add('hidden');
             document.getElementById('storm-list-view').classList.remove('hidden');
         }
-        function parseCsv(t){const lines=t.trim().split('\n');let all=[],h=[];lines.forEach(l=>{if(l.toLowerCase().includes('begin_date_time')){h=l.split(',').map(v=>v.replace(/"/g,'').trim().toUpperCase());return;}if(!l.includes(',')||h.length===0)return;const v=l.split(',');const p=h.reduce((o,k,i)=>{o[k]=v[i]?v[i].replace(/"/g,'').trim():'';return o;},{});all.push(p);});return all;}
-        function populateStormDatePanel(){const dateList=document.getElementById('storm-date-list');if(stormDataCollection.length===0){dateList.innerHTML=`<p class="text-sm text-gray-500">No storm data loaded.</p>`;return;}const groupedByLocation=stormDataCollection.reduce((acc,storm)=>{(acc[storm.locationName]=acc[storm.locationName]||[]).push(storm);return acc;},{});let html='';for(const location in groupedByLocation){html+=`<details><summary>${location}</summary><div class="storm-event-item">`;groupedByLocation[location].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(storm=>{html+=`<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${storm.id}"><span class="ml-2 text-gray-700">${storm.date} (${storm.maxHail.toFixed(2)}" hail)</span></label>`;});html+=`</div></details>`;}dateList.innerHTML=html;}
-        window.handleDateSelection=function(){
+        function parseCsv(t) {
+            const lines = t.trim().split('\n');
+            let all = [], h = [];
+            lines.forEach(l => {
+                if (l.toLowerCase().includes('begin_date_time')) {
+                    h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase());
+                    return;
+                }
+                if (!l.includes(',') || h.length === 0) return;
+                const v = l.split(',');
+                const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].replace(/"/g, '').trim() : ''; return o; }, {});
+                all.push(p);
+            });
+            return all;
+        }
+        function populateStormDatePanel() {
+            const dateList = document.getElementById('storm-date-list');
+            if (stormDataCollection.length === 0) {
+                dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`;
+                return;
+            }
+            const groupedByLocation = stormDataCollection.reduce((acc, storm) => {
+                (acc[storm.locationName] = acc[storm.locationName] || []).push(storm);
+                return acc;
+            }, {});
+            let html = '';
+            for (const location in groupedByLocation) {
+                html += `<details><summary>${location}</summary><div class="storm-event-item">`;
+                groupedByLocation[location].sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(storm => {
+                    html += `<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${storm.id}"><span class="ml-2 text-gray-700">${storm.date} (${storm.maxHail.toFixed(2)}" hail)</span></label>`;
+                });
+                html += `</div></details>`;
+            }
+            dateList.innerHTML = html;
+        }
+        window.handleDateSelection = function() {
             swathLayer.clearLayers();
             const checkboxes = document.querySelectorAll('#storm-date-list input:checked');
             const selectedIds = Array.from(checkboxes).map(cb => cb.value);
@@ -397,10 +565,25 @@
                 }
             });
         }
-        function drawHailSwath(p, c) { if(p.length === 0) return; if (p.length < 3) { p.forEach(i => L.circle([parseFloat(i.BEGIN_LAT),parseFloat(i.BEGIN_LON)],{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer)); return; }; const tP = p.map(i => turf.point([parseFloat(i.BEGIN_LON), parseFloat(i.BEGIN_LAT)])); const hull = turf.convex(turf.featureCollection(tP)); if (hull) { const b1 = turf.buffer(hull, 1, { units: 'miles' }); const b2 = turf.buffer(hull, 2, { units: 'miles' }); L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer); L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer); L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer); } }
+        function drawHailSwath(p, c) {
+            if (p.length === 0) return;
+            if (p.length < 3) {
+                p.forEach(i => L.circle([parseFloat(i.BEGIN_LAT), parseFloat(i.BEGIN_LON)], { radius: 1609, color: c, weight: 1, opacity: 0.7, fillColor: c, fillOpacity: 0.2 }).addTo(swathLayer));
+                return;
+            };
+            const tP = p.map(i => turf.point([parseFloat(i.BEGIN_LON), parseFloat(i.BEGIN_LAT)]));
+            const hull = turf.convex(turf.featureCollection(tP));
+            if (hull) {
+                const b1 = turf.buffer(hull, 1, { units: 'miles' });
+                const b2 = turf.buffer(hull, 2, { units: 'miles' });
+                L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer);
+                L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer);
+                L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer);
+            }
+        }
 
         // --- Event Listeners for UI controls ---
-        document.getElementById('remove-selected-btn').addEventListener('click', () => { const r=document.querySelector('#address-list-content input:checked'); if (r) removeMarker(r.value); });
+        document.getElementById('remove-selected-btn').addEventListener('click', () => { const r = document.querySelector('#address-list-content input:checked'); if (r) removeMarker(r.value); });
         document.getElementById('remove-all-btn').addEventListener('click', () => document.getElementById('confirmation-modal').classList.remove('hidden'));
         document.getElementById('confirm-remove').addEventListener('click', () => { removeAllMarkersFromFirestore(); markers.clearLayers(); updateAddressRemovalList(); document.getElementById('confirmation-modal').classList.add('hidden'); });
         document.getElementById('cancel-remove').addEventListener('click', () => document.getElementById('confirmation-modal').classList.add('hidden'));
@@ -418,7 +601,10 @@
             if (window.innerWidth < 640) { slider.style.transform = isOpening ? 'translateY(calc(-60vh + 2rem))' : 'translateY(0)';
             } else { topRightControls.style.right = isOpening ? '21rem' : '1rem'; }
         });
-        document.getElementById('cluster-slider').addEventListener('input', (e) => { if (!map) return; const newRadius = parseInt(e.target.value, 10); const allLayers = markers.getLayers(); map.removeLayer(markers); markers = L.markerClusterGroup({ maxClusterRadius: newRadius }); markers.addLayers(allLayers); map.addLayer(markers); });
+        document.getElementById('cluster-slider').addEventListener('input', (e) => {
+            if (!map) return; const newRadius = parseInt(e.target.value, 10); const allLayers = markers.getLayers();
+            map.removeLayer(markers); markers = L.markerClusterGroup({ maxClusterRadius: newRadius }); markers.addLayers(allLayers); map.addLayer(markers);
+        });
         document.querySelectorAll('input[name="filter"]').forEach(c => c.addEventListener('change', updateAddressRemovalList));
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
@@ -455,13 +641,79 @@
                 map.setView([latitude, longitude], 16);
             }, () => showTemporaryMessage("Could not get your location."));
         });
-        
+
         // --- Mass Upload Logic ---
-        async function handleUpload() {const fI=document.getElementById('file-upload');const tA=document.getElementById('text-upload');const f=fI.files[0];const t=tA.value;let a=[];if(f)a=await parseFile(f);else if(t.trim())a=t.trim().split('\n').filter(l=>l.trim()!=='');if(a.length===0)return alert("No addresses found.");document.getElementById('upload-modal').classList.add('hidden');fI.value='';tA.value='';showTemporaryMessage("Loading Addresses...");await processAddressList(a);}
-        function showTemporaryMessage(m){const d=document.createElement('div');d.className='fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';d.textContent=m;document.body.appendChild(d);setTimeout(()=>{d.classList.add('opacity-0');setTimeout(()=>d.remove(),500);},6000);}
-        function parseFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const c=e.target.result;if(f.name.endsWith('.csv')||f.name.endsWith('.txt')){res(c.trim().split('\n').filter(l=>l.trim()!==''));}else if(f.name.endsWith('.xlsx')){const w=XLSX.read(c,{type:'binary'});const sN=w.SheetNames[0];const s=w.Sheets[sN];const j=XLSX.utils.sheet_to_json(s,{header:1});res(j.map(row=>row[0]).filter(a=>a));}else{rej(new Error("Unsupported file type."));}};r.onerror=err=>rej(err);r.readAsBinaryString(f);});}
-        async function processAddressList(a){const sI=createStatusIndicator();if(!sI)return;for(let i=0;i<a.length;i++){sI.textContent=`Loading Address ${i+1} of ${a.length}...`;try{const url=`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;const r=await fetch(url);const d=await r.json();if(d&&d.length>0){const{lat,lon,display_name}=d[0];addMarker(parseFloat(lat),parseFloat(lon),display_name,{shouldOpenPopup:false});}else console.warn(`Could not geocode: ${a[i]}`);}catch(e){console.error(`Error geocoding ${a[i]}:`,e);}await new Promise(res=>setTimeout(res,100));}sI.textContent='Done!';sI.classList.remove('bg-yellow-500');sI.classList.add('bg-green-500');setTimeout(()=>sI.remove(),3000);if(markers.getLayers().length>0)map.fitBounds(markers.getBounds(),{padding:[50,50]});}
-        function createStatusIndicator(){if(document.getElementById('app-container').classList.contains('hidden'))return null;const i=document.createElement('div');i.className='px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';document.getElementById('top-right-controls').appendChild(i);return i;}
+        async function handleUpload() {
+            const fileUploadInput = document.getElementById('file-upload'); const textUploadArea = document.getElementById('text-upload');
+            const file = fileUploadInput.files[0]; const text = textUploadArea.value; let addresses = [];
+            if (file) addresses = await parseFile(file);
+            else if (text.trim()) addresses = text.trim().split('\n').filter(l => l.trim() !== '');
+            if (addresses.length === 0) return alert("No addresses found.");
+            document.getElementById('upload-modal').classList.add('hidden'); fileUploadInput.value = ''; textUploadArea.value = '';
+            showTemporaryMessage("Loading Addresses..."); await processAddressList(addresses);
+        }
+        function showTemporaryMessage(m) {
+            const d = document.createElement('div');
+            d.className = 'fixed top-24 left-1/2 -translate-x-1/2 z-[3000] bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition-opacity duration-500';
+            d.textContent = m;
+            document.body.appendChild(d);
+            setTimeout(() => {
+                d.classList.add('opacity-0');
+                setTimeout(() => d.remove(), 500);
+            }, 6000);
+        }
+        function parseFile(f) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = e => {
+                    const c = e.target.result;
+                    if (f.name.endsWith('.csv') || f.name.endsWith('.txt')) {
+                        res(c.trim().split('\n').filter(l => l.trim() !== ''));
+                    } else if (f.name.endsWith('.xlsx')) {
+                        const w = XLSX.read(c, { type: 'binary' });
+                        const sN = w.SheetNames[0];
+                        const s = w.Sheets[sN];
+                        const j = XLSX.utils.sheet_to_json(s, { header: 1 });
+                        res(j.map(row => row[0]).filter(a => a));
+                    } else {
+                        rej(new Error("Unsupported file type."));
+                    }
+                };
+                r.onerror = err => rej(err);
+                r.readAsBinaryString(f);
+            });
+        }
+        async function processAddressList(a) {
+            const sI = createStatusIndicator();
+            if (!sI) return;
+            for (let i = 0; i < a.length; i++) {
+                sI.textContent = `Loading Address ${i + 1} of ${a.length}...`;
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(a[i])}&countrycodes=us&limit=1`;
+                    const r = await fetch(url);
+                    const d = await r.json();
+                    if (d && d.length > 0) {
+                        const { lat, lon, display_name } = d[0];
+                        addMarker(parseFloat(lat), parseFloat(lon), display_name, { shouldOpenPopup: false });
+                    } else console.warn(`Could not geocode: ${a[i]}`);
+                } catch (e) {
+                    console.error(`Error geocoding ${a[i]}:`, e);
+                }
+                await new Promise(res => setTimeout(res, 100));
+            }
+            sI.textContent = 'Done!';
+            sI.classList.remove('bg-yellow-500');
+            sI.classList.add('bg-green-500');
+            setTimeout(() => sI.remove(), 3000);
+            if (markers.getLayers().length > 0) map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }
+        function createStatusIndicator() {
+            if (document.getElementById('app-container').classList.contains('hidden')) return null;
+            const i = document.createElement('div');
+            i.className = 'px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md transition-all';
+            document.getElementById('top-right-controls').appendChild(i);
+            return i;
+        }
     </script>
 </body>
 </html>
