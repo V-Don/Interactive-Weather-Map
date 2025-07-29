@@ -116,7 +116,7 @@
                         <button id="back-to-list-view-btn" class="text-sm font-semibold text-blue-600 hover:underline">Back</button>
                     </div>
                     <p class="text-xs text-gray-600 my-3">
-                        Go to the <a href="https://www.ncei.noaa.gov/maps/swdi/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">NOAA SWDI Map</a>, export the CSV for your event, and paste the contents below.
+                        Go to the <a href="https://www.ncei.noaa.gov/maps/swdi/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">NOAA SWDI Map</a>, export a CSV, and paste its contents below.
                     </p>
                     <textarea id="storm-data-textarea" class="w-full h-32 p-2 border border-gray-300 rounded-md text-xs" placeholder="Paste CSV data here..."></textarea>
                     <button id="process-storm-data-btn" class="w-full mt-3 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-sm hover:bg-green-700 transition">Add Pasted Data</button>
@@ -134,7 +134,7 @@
                 <div class="sm:hidden w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3 flex-shrink-0"></div>
                 <h3 class="text-lg font-bold mb-2 text-gray-800 flex-shrink-0">Address List</h3>
                 <div id="filter-section" class="mb-2 p-2 border rounded-md flex-shrink-0"><h4 class="font-semibold text-sm mb-2">Filter by Status</h4><div class="grid grid-cols-2 gap-2 text-sm"><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="inspected"> Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="not_inspected"> Not Inspected</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="damaged"> Damaged</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="no_damage"> No Damage</label><label><input type="checkbox" onchange="updateAddressRemovalList()" name="filter" value="review"> Review</label></div></div>
-                <div id="address-list-content" class="space-y-1 overflow-y-auto flex-grow"></div>
+                <div id="address-list-content" class="space-y-1 overflow-y-auto h-[calc(100%-18rem)] sm:h-auto sm:flex-grow"></div>
                 <div class="mt-2 pt-2 border-t flex-shrink-0 space-y-2">
                     <button id="remove-selected-btn" class="w-full px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-sm hover:bg-yellow-600 transition">Remove Selected</button>
                     <button id="remove-all-btn" class="w-full px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition">Remove All Addresses</button>
@@ -452,15 +452,24 @@
         window.zoomToMarker = function(id) { markers.eachLayer(l => { if (l.options.id === id) markers.zoomToShowLayer(l, () => l.openPopup()); }); }
         
         // --- Storm Data Logic ---
-        function processNewStormData(csvText) {
+        async function processNewStormData(csvText) {
             if (!csvText.trim()) return alert("No data to process.");
             const tempStormData = parseCsv(csvText);
-            const firstRow = tempStormData.find(row => row.CZ_NAME && row.CZ_NAME !== 'NA' && row.STATE);
-            if (!firstRow) return alert("Could not read location data from CSV. Please use a CSV from the NOAA Storm Events website.");
-            const date = firstRow.BEGIN_DATE_TIME.split(' ')[0];
-            const locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
-            const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAGNITUDE || 0)));
+            const firstRow = tempStormData.find(row => (row.CZ_NAME && row.CZ_NAME !== 'NA' && row.STATE) || (row.LAT && row.LON));
+            if (!firstRow) return alert("Could not read location or date data from CSV.");
+            
+            let locationName;
+            if (firstRow.CZ_NAME && firstRow.STATE) {
+                locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
+            } else {
+                const geo = await reverseGeocode(parseFloat(firstRow.LAT), parseFloat(firstRow.LON));
+                locationName = `${geo.county}, ${geo.state}`;
+            }
+
+            const date = (firstRow.BEGIN_DATE_TIME || firstRow.ZTIME).split(/[\sT]/)[0];
+            const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAXSIZE || p.MAGNITUDE || 0)));
             const id = `${date}_${locationName.replace(/, | /g, '_')}`;
+
             const newStorm = { id, locationName, date, maxHail, csvText };
             if (!stormDataCollection.some(storm => storm.id === id)) {
                 stormDataCollection.push(newStorm);
@@ -475,7 +484,7 @@
             document.getElementById('storm-input-view').classList.add('hidden');
             document.getElementById('storm-list-view').classList.remove('hidden');
         }
-        function parseCsv(t) {const lines = t.trim().split('\n'); let all = [], h = []; lines.forEach(l => { if (l.toLowerCase().includes('begin_date_time')) { h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase()); return; } if (!l.includes(',') || h.length === 0) return; const v = l.split(','); const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].replace(/"/g, '').trim() : ''; return o; }, {}); all.push(p); }); return all;}
+        function parseCsv(t) {const lines = t.trim().split('\n'); let all = [], h = []; lines.forEach(l => { const lowerL = l.toLowerCase(); if (lowerL.includes('begin_date_time') || lowerL.startsWith('ztime')) { h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase()); return; } if (!l.includes(',') || h.length === 0) return; const v = l.split(','); const p = h.reduce((o, k, i) => { o[k] = v[i] ? v[i].replace(/"/g, '').trim() : ''; return o; }, {}); all.push(p); }); return all;}
         function populateStormDatePanel() {
             const dateList = document.getElementById('storm-date-list');
             if (stormDataCollection.length === 0) { dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`; return; }
@@ -503,12 +512,12 @@
                 const storm = stormDataCollection.find(s => s.id === id);
                 if (!storm) return;
                 const color = stormColors[index % stormColors.length];
-                const pointsForDate = parseCsv(storm.csvText).filter(p => p.MAGNITUDE && parseFloat(p.MAGNITUDE) > 0);
+                const pointsForDate = parseCsv(storm.csvText).filter(p => parseFloat(p.MAXSIZE || p.MAGNITUDE || 0) > 0);
                 drawHailSwath(pointsForDate, color);
                 if (pointsForDate.length > 0) { infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${storm.date} - ${storm.locationName} (${storm.maxHail.toFixed(2)}")</span></div>`; }
             });
         }
-        function drawHailSwath(p, c) { if(p.length === 0) return; if (p.length < 3) { p.forEach(i => L.circle([parseFloat(i.BEGIN_LAT),parseFloat(i.BEGIN_LON)],{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer)); return; }; const tP = p.map(i => turf.point([parseFloat(i.BEGIN_LON), parseFloat(i.BEGIN_LAT)])); const hull = turf.convex(turf.featureCollection(tP)); if (hull) { const b1 = turf.buffer(hull, 1, { units: 'miles' }); const b2 = turf.buffer(hull, 2, { units: 'miles' }); L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer); L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer); L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer); } }
+        function drawHailSwath(p, c) { if(p.length === 0) return; const coords = p.map(i => [parseFloat(i.BEGIN_LAT || i.LAT), parseFloat(i.BEGIN_LON || i.LON)]); if (p.length < 3) { coords.forEach(coord => L.circle(coord, {radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer)); return; }; const tP = coords.map(coord => turf.point([coord[1], coord[0]])); const hull = turf.convex(turf.featureCollection(tP)); if (hull) { const b1 = turf.buffer(hull, 1, { units: 'miles' }); const b2 = turf.buffer(hull, 2, { units: 'miles' }); L.geoJSON(b2, { style: () => ({ color: c, weight: 0, fillOpacity: 0.15, fillColor: c }) }).addTo(swathLayer); L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer); L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer); } }
         window.searchNoaaForLocation = function(county, state) {
             map.closePopup();
             const today = new Date();
@@ -549,14 +558,6 @@
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
         document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
-        document.getElementById('generate-noaa-link-btn').addEventListener('click', () => {
-            const countyState = document.getElementById('county-input').value; const start = document.getElementById('start-date-input').value;
-            const end = document.getElementById('end-date-input').value; if (!countyState || !start || !end) { return alert('Please fill in all fields.'); }
-            const [county, state] = countyState.split(',').map(s => s.trim()); if (!county || !state) { return alert('Please use "County, State" format (e.g., Tarrant, TX).'); }
-            const [startYear, startMonth, startDay] = start.split('-'); const [endYear, endMonth, endDay] = end.split('-');
-            const noaaUrl = `https://www.ncdc.noaa.gov/stormevents/listevents.jsp?eventType=HAIL&beginDate_mm=${startMonth}&beginDate_dd=${startDay}&beginDate_yyyy=${startYear}&endDate_mm=${endMonth}&endDate_dd=${endDay}&endDate_yyyy=${endYear}&county=${county.toUpperCase()}%3A${state.toUpperCase()}&hailfilter=1.00&sort=DT&submitbutton=Search`;
-            window.open(noaaUrl, '_blank');
-        });
         document.getElementById('use-location-btn').addEventListener('click', () => {
             if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
             showTemporaryMessage("Finding your location...");
