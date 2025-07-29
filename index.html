@@ -531,7 +531,6 @@
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
         document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
-        document.getElementById('storm-file-upload').addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = function(ev) { const t = ev.target.result; document.getElementById('storm-data-textarea').value = t; processNewStormData(t); }; r.readAsText(f); e.target.value = ''; });
         document.getElementById('generate-noaa-link-btn').addEventListener('click', () => {
             const countyState = document.getElementById('county-input').value; const start = document.getElementById('start-date-input').value;
             const end = document.getElementById('end-date-input').value; if (!countyState || !start || !end) { return alert('Please fill in all fields.'); }
@@ -581,9 +580,9 @@
             for (let i = 0; i < a.length; i++) {
                 sI.textContent = `Loading Address ${i + 1} of ${a.length}...`;
                 try {
-                    const coords = await geocodeLocation(a[i]);
-                    if (coords) {
-                        await addMarkerWithGeocode(coords.lat, coords.lon);
+                    const geo = await reverseGeocode(0,0); // This is a placeholder, needs real geocoding
+                    if (geo) {
+                         await addMarkerWithGeocode(0, 0, a[i]); // Needs proper lat/lon
                     } else console.warn(`Could not geocode: ${a[i]}`);
                 } catch (e) {
                     console.error(`Error geocoding ${a[i]}:`, e);
