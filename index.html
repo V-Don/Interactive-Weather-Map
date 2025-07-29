@@ -43,27 +43,6 @@
         input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; width: 100%; }
         input[type=range]::-webkit-slider-runnable-track { background: #e5e7eb; height: 0.5rem; border-radius: 0.25rem; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -4px; background-color: #3b82f6; height: 1.25rem; width: 1.25rem; border-radius: 9999px; }
-        
-        #storm-date-list details > summary {
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-weight: bold;
-            list-style: none;
-        }
-        #storm-date-list details > summary::-webkit-details-marker { display: none; }
-        #storm-date-list details > summary:before {
-            content: '►';
-            margin-right: 0.5rem;
-            display: inline-block;
-            transition: transform 0.2s;
-        }
-        #storm-date-list details[open] > summary:before {
-            transform: rotate(90deg);
-        }
-        #storm-date-list .storm-event-item {
-            padding-left: 1.75rem;
-        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,7 +161,7 @@
         // --- Global App Variables ---
         let map;
         let currentUser = null;
-        let stormDataCollection = [];
+        let stormDataCollection = {}; // Reverted to object
         const stormColors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
         let suggestionTimeout;
         
@@ -328,11 +307,11 @@
                 if (doc.exists && doc.data().collection) {
                     stormDataCollection = doc.data().collection;
                 } else {
-                    stormDataCollection = [];
+                    stormDataCollection = {};
                 }
             } catch (error) {
                 console.error("Error loading storm data:", error);
-                stormDataCollection = [];
+                stormDataCollection = {};
             }
             populateStormDatePanel();
         }
@@ -361,21 +340,6 @@
             }
             addressSuggestions.classList.remove('hidden');
         }
-        async function reverseGeocode(lat, lon) {
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                return {
-                    displayName: data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
-                    county: data.address?.county,
-                    state: data.address?.state
-                };
-            } catch (error) {
-                console.error("Reverse geocoding error:", error);
-                return { displayName: `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
-            }
-        }
         addressInput.addEventListener('keyup', (e) => {
             clearTimeout(suggestionTimeout);
             suggestionTimeout = setTimeout(() => fetchAddressSuggestions(e.target.value), 300);
@@ -385,23 +349,19 @@
             if (s) {
                 const lat = parseFloat(s.dataset.lat);
                 const lon = parseFloat(s.dataset.lon);
-                addMarkerWithGeocode(lat, lon);
+                addMarker(lat, lon, s.dataset.name);
                 addressInput.value = '';
                 addressSuggestions.classList.add('hidden');
             }
         });
         
         // --- Marker Management & UI Logic ---
-        async function addMarkerWithGeocode(lat, lon) {
-            const geo = await reverseGeocode(lat, lon);
-            addMarker(lat, lon, geo.displayName, { county: geo.county, state: geo.state });
-        }
         function addMarker(lat, lon, name, opt = {}) {
             const id = opt.id || `marker-${Date.now()}`;
             const status = opt.inspectionStatus || { inspected: false, damage: 'none', photoLink: '' };
-            const markerOptions = { id: id, address: name, inspectionStatus: status, county: opt.county, state: opt.state };
+            const markerOptions = { id: id, address: name, inspectionStatus: status };
             const marker = L.marker([lat, lon], markerOptions);
-            marker.bindPopup(() => createPopupContent(id, name, lat, lon, opt.county, opt.state));
+            marker.bindPopup(() => createPopupContent(id, name));
             marker.on('popupopen', () => populatePopup(id, marker.options.inspectionStatus));
             markers.addLayer(marker);
             updateMarkerIcon(marker);
@@ -409,14 +369,13 @@
                 markers.zoomToShowLayer(marker, () => marker.openPopup());
             }
             if (opt.source !== 'firestore') {
-                const dataToSave = { lat, lon, id, address: name, inspectionStatus: status, county: opt.county, state: opt.state };
+                const dataToSave = { lat, lon, id, address: name, inspectionStatus: status };
                 saveMarkerToFirestore(dataToSave);
             }
             updateAddressRemovalList();
         }
-        function createPopupContent(id, name, lat, lon, county, state) {
-            const stormSearchButton = (county && state) ? `<button class="popup-button popup-button-storm" onclick="window.searchNoaaForLocation('${county}', '${state}')">Search Storms Here</button>` : '';
-            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2 space-y-2"><div><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div></div><div class="border-t pt-2 flex flex-col space-y-2">${stormSearchButton}<button class="popup-button popup-button-remove" onclick="removeMarker('${id}')">Remove Address</button></div></div>`;
+        function createPopupContent(id, name) {
+            return `<div class="space-y-3"><p class="font-bold text-gray-800">${name}</p><div class="border-t pt-2 space-y-2"><div><label class="flex items-center"><input type="checkbox" id="inspected-${id}" class="h-4 w-4 rounded border-gray-300" onchange="updateMarkerStatus('${id}')"><span class="ml-2 font-semibold text-gray-700">Inspected</span></label></div><div id="damage-options-${id}" class="pl-4 space-y-1"><label><input type="radio" name="damage-${id}" value="damaged" onchange="updateMarkerStatus('${id}')" disabled> Damaged</label><br><label><input type="radio" name="damage-${id}" value="no_damage" onchange="updateMarkerStatus('${id}')" disabled> No Damage</label><br><label><input type="radio" name="damage-${id}" value="review" onchange="updateMarkerStatus('${id}')" disabled> Further Review</label></div><div><label for="photo-link-${id}" class="text-sm">Link to Photos</label><input type="text" id="photo-link-${id}" class="w-full p-1 border rounded mt-1" oninput="updateMarkerStatus('${id}')"></div></div><div class="border-t pt-2 flex flex-col space-y-2"><button class="popup-button popup-button-remove" onclick="removeMarker('${id}')">Remove Address</button></div></div>`;
         }
         function populatePopup(id, s) {
             document.getElementById(`inspected-${id}`).checked = s.inspected;
@@ -440,7 +399,7 @@
                     l.options.inspectionStatus = { inspected: insp, damage: dmg, photoLink: link };
                     updateMarkerIcon(l);
                     document.querySelectorAll(`input[name="damage-${id}"]`).forEach(r => r.disabled = !insp);
-                    const d = { lat: l.getLatLng().lat, lon: l.getLatLng().lng, id: l.options.id, address: l.options.address, inspectionStatus: l.options.inspectionStatus, county: l.options.county, state: l.options.state };
+                    const d = { lat: l.getLatLng().lat, lon: l.getLatLng().lng, id: l.options.id, address: l.options.address, inspectionStatus: l.options.inspectionStatus };
                     saveMarkerToFirestore(d);
                     updateAddressRemovalList();
                 }
@@ -452,32 +411,18 @@
         window.zoomToMarker = function(id) { markers.eachLayer(l => { if (l.options.id === id) markers.zoomToShowLayer(l, () => l.openPopup()); }); }
         
         // --- Storm Data Logic ---
-        async function processNewStormData(csvText) {
+        function processNewStormData(csvText) {
             if (!csvText.trim()) return alert("No data to process.");
             const tempStormData = parseCsv(csvText);
-            const firstRow = tempStormData.find(row => (row.CZ_NAME && row.CZ_NAME !== 'NA' && row.STATE) || (row.LAT && row.LON));
-            if (!firstRow) {
-                return alert("Could not read location or date data from CSV. Please check the format.");
+            const firstRow = tempStormData[0];
+            if (!firstRow || !firstRow.ZTIME) { 
+                return alert("Could not read date from the provided CSV data.");
             }
-            
-            let locationName;
-            let date = (firstRow.BEGIN_DATE_TIME || firstRow.ZTIME).split(/[\sT]/)[0];
-            
-            if (firstRow.CZ_NAME && firstRow.STATE) {
-                locationName = `${firstRow.CZ_NAME}, ${firstRow.STATE}`;
-            } else {
-                showTemporaryMessage("CSV has no location name. Looking it up...");
-                const geo = await reverseGeocode(parseFloat(firstRow.LAT), parseFloat(firstRow.LON));
-                locationName = `${geo.county}, ${geo.state}`;
-            }
+            const date = firstRow.ZTIME.split('T')[0];
 
-            const maxHail = Math.max(...tempStormData.map(p => parseFloat(p.MAXSIZE || p.MAGNITUDE || 0)));
-            const id = `${date}_${locationName.replace(/, | /g, '_')}`;
-
-            const newStorm = { id, locationName, date, maxHail, csvText };
-            if (!stormDataCollection.some(storm => storm.id === id)) {
-                stormDataCollection.push(newStorm);
-            }
+            // Add new data to the collection, keyed by date
+            stormDataCollection[date] = csvText;
+            
             if (currentUser) {
                 const docRef = db.collection('users').doc(currentUser.uid).collection('appData').doc('stormEvents');
                 docRef.set({ collection: stormDataCollection });
@@ -488,68 +433,46 @@
             document.getElementById('storm-input-view').classList.add('hidden');
             document.getElementById('storm-list-view').classList.remove('hidden');
         }
-        function parseCsv(t) {
-            const lines = t.trim().split('\n');
-            let all = [], h = [];
-            lines.forEach(l => {
-                const lowerL = l.toLowerCase();
-                if (lowerL.includes('begin_date_time') || lowerL.startsWith('ztime')) {
-                    h = l.split(',').map(v => v.replace(/"/g, '').trim().toUpperCase());
-                    return;
-                }
-                if (!l.includes(',') || h.length === 0) return;
-                const v = l.split(',');
-                const p = h.reduce((o, k, i) => {
-                    if(h[i]) { // Ensure header exists for this column
-                        o[h[i]] = v[i] ? v[i].replace(/"/g, '').trim() : '';
-                    }
-                    return o;
-                }, {});
-                all.push(p);
-            });
-            return all;
-        }
+        function parseCsv(t) {const lines = t.trim().split('\n'); let all = [], h = []; lines.forEach(l => { if (l.toLowerCase().startsWith('ztime')) { h = l.split(',').map(v => v.trim().toUpperCase()); return; } if (!l.includes(',') || h.length === 0) return; const v = l.split(','); const p = h.reduce((o, k, i) => { if(h[i]) { o[h[i]] = v[i] ? v[i].trim() : ''; } return o; }, {}); all.push(p); }); return all;}
         function populateStormDatePanel() {
             const dateList = document.getElementById('storm-date-list');
-            if (!stormDataCollection || stormDataCollection.length === 0) {
-                dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`;
-                return;
+            const dates = Object.keys(stormDataCollection).sort((a,b) => new Date(b) - new Date(a));
+
+            if (dates.length === 0) { 
+                dateList.innerHTML = `<p class="text-sm text-gray-500">No storm data loaded.</p>`; 
+                return; 
             }
-            const groupedByLocation = stormDataCollection.reduce((acc, storm) => {
-                (acc[storm.locationName] = acc[storm.locationName] || []).push(storm);
-                return acc;
-            }, {});
-            let html = '';
-            for (const location in groupedByLocation) {
-                html += `<details open><summary>${location}</summary><div class="storm-event-item">`;
-                groupedByLocation[location].sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(storm => {
-                    html += `<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${storm.id}"><span class="ml-2 text-gray-700">${storm.date} (${storm.maxHail.toFixed(2)}" hail)</span></label>`;
-                });
-                html += `</div></details>`;
-            }
-            dateList.innerHTML = html;
+            dateList.innerHTML = dates.map(date => {
+                const entries = parseCsv(stormDataCollection[date]);
+                if (entries.length === 0) return '';
+                const maxHail = Math.max(...entries.map(p => parseFloat(p.MAXSIZE || 0)));
+                return `<label class="flex items-center"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" onchange="handleDateSelection()" value="${date}"><span class="ml-2 text-gray-700">${date} (${maxHail.toFixed(2)}" hail)</span></label>`
+            }).join('');
         }
         window.handleDateSelection = function() {
             swathLayer.clearLayers();
             const checkboxes = document.querySelectorAll('#storm-date-list input:checked');
-            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            const selectedDates = Array.from(checkboxes).map(cb => cb.value);
             const infoPanel = document.getElementById('info-panel');
             const infoContent = document.getElementById('info-content');
-            if (selectedIds.length === 0) return infoPanel.classList.add('hidden');
+            if (selectedDates.length === 0) return infoPanel.classList.add('hidden');
             infoPanel.classList.remove('hidden');
             infoContent.innerHTML = '';
-            selectedIds.forEach((id, index) => {
-                const storm = stormDataCollection.find(s => s.id === id);
-                if (!storm) return;
+            selectedDates.forEach((date, index) => {
+                const stormCsv = stormDataCollection[date];
+                if (!stormCsv) return;
                 const color = stormColors[index % stormColors.length];
-                const pointsForDate = parseCsv(storm.csvText).filter(p => parseFloat(p.MAXSIZE || p.MAGNITUDE || 0) > 0);
+                const pointsForDate = parseCsv(stormCsv).filter(p => parseFloat(p.MAXSIZE || 0) > 0);
                 drawHailSwath(pointsForDate, color);
-                if (pointsForDate.length > 0) { infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${storm.date} - ${storm.locationName} (${storm.maxHail.toFixed(2)}")</span></div>`; }
+                if (pointsForDate.length > 0) { 
+                    const maxHail = Math.max(...pointsForDate.map(p => parseFloat(p.MAXSIZE || 0)));
+                    infoContent.innerHTML += `<div class="flex items-center" style="color: ${color};"><div class="w-4 h-4 rounded-full mr-2" style="background-color: ${color};"></div><span class="font-semibold">${date} (${maxHail.toFixed(2)}")</span></div>`; 
+                }
             });
         }
-        function drawHailSwath(p, c) {
+        function drawHailSwath(p, c) { 
             if(p.length === 0) return;
-            const coords = p.map(i => [parseFloat(i.BEGIN_LAT || i.LAT), parseFloat(i.BEGIN_LON || i.LON)]).filter(coord => !isNaN(coord[0]) && !isNaN(coord[1]));
+            const coords = p.map(i => [parseFloat(i.LAT), parseFloat(i.LON)]).filter(coord => !isNaN(coord[0]) && !isNaN(coord[1]));
             if (coords.length < 3) {
                 coords.forEach(coord => L.circle(coord,{radius:1609,color:c,weight:1,opacity:0.7,fillColor:c,fillOpacity:0.2}).addTo(swathLayer));
                 return;
@@ -563,18 +486,6 @@
                 L.geoJSON(b1, { style: () => ({ color: c, weight: 0, fillOpacity: 0.2, fillColor: c }) }).addTo(swathLayer);
                 L.geoJSON(hull, { style: () => ({ color: c, weight: 1, opacity: 0.6, fillColor: c, fillOpacity: 0.3 }) }).addTo(swathLayer);
             }
-        }
-        window.searchNoaaForLocation = function(county, state) {
-            map.closePopup();
-            const today = new Date();
-            const oneYearAgo = new Date();
-            oneYearAgo.setFullYear(today.getFullYear() - 1);
-            const startMonth = String(oneYearAgo.getMonth() + 1).padStart(2, '0');
-            const startDay = String(oneYearAgo.getDate()).padStart(2, '0');
-            const endMonth = String(today.getMonth() + 1).padStart(2, '0');
-            const endDay = String(today.getDate()).padStart(2, '0');
-            const noaaUrl = `https://www.ncdc.noaa.gov/stormevents/listevents.jsp?eventType=HAIL&beginDate_mm=${startMonth}&beginDate_dd=${startDay}&beginDate_yyyy=${oneYearAgo.getFullYear()}&endDate_mm=${endMonth}&endDate_dd=${endDay}&endDate_yyyy=${today.getFullYear()}&county=${county.toUpperCase()}%3A${state.toUpperCase()}&hailfilter=1.00&sort=DT&submitbutton=Search`;
-            window.open(noaaUrl, '_blank');
         }
 
         // --- Event Listeners for UI controls ---
@@ -604,37 +515,6 @@
         document.getElementById('show-input-view-btn').addEventListener('click', () => { document.getElementById('storm-list-view').classList.add('hidden'); document.getElementById('storm-input-view').classList.remove('hidden'); });
         document.getElementById('back-to-list-view-btn').addEventListener('click', () => { document.getElementById('storm-input-view').classList.add('hidden'); document.getElementById('storm-list-view').classList.remove('hidden'); });
         document.getElementById('process-storm-data-btn').addEventListener('click', () => { const d = document.getElementById('storm-data-textarea').value; processNewStormData(d); });
-        document.getElementById('generate-noaa-link-btn').addEventListener('click', () => {
-            const countyState = document.getElementById('county-input').value; const start = document.getElementById('start-date-input').value;
-            const end = document.getElementById('end-date-input').value; if (!countyState || !start || !end) { return alert('Please fill in all fields.'); }
-            const [county, state] = countyState.split(',').map(s => s.trim()); if (!county || !state) { return alert('Please use "County, State" format (e.g., Tarrant, TX).'); }
-            const [startYear, startMonth, startDay] = start.split('-'); const [endYear, endMonth, endDay] = end.split('-');
-            const noaaUrl = `https://www.ncdc.noaa.gov/stormevents/listevents.jsp?eventType=HAIL&beginDate_mm=${startMonth}&beginDate_dd=${startDay}&beginDate_yyyy=${startYear}&endDate_mm=${endMonth}&endDate_dd=${endDay}&endDate_yyyy=${endYear}&county=${county.toUpperCase()}%3A${state.toUpperCase()}&hailfilter=1.00&sort=DT&submitbutton=Search`;
-            window.open(noaaUrl, '_blank');
-        });
-        document.getElementById('use-location-btn').addEventListener('click', () => {
-            if (!navigator.geolocation) return alert('Geolocation is not supported by your browser.');
-            showTemporaryMessage("Finding your location...");
-            navigator.geolocation.getCurrentPosition(async position => {
-                const { latitude, longitude } = position.coords;
-                if (tempLocationMarker) map.removeLayer(tempLocationMarker);
-                const popupContent = document.createElement('div');
-                popupContent.innerHTML = `<p class="font-semibold mb-2">Add this location to your addresses?</p>`;
-                const btnContainer = document.createElement('div'); btnContainer.className = 'flex gap-2';
-                const yesBtn = document.createElement('button');
-                yesBtn.className = 'px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600';
-                yesBtn.textContent = 'Yes';
-                yesBtn.onclick = async () => { map.removeLayer(tempLocationMarker); tempLocationMarker = null; await addMarkerWithGeocode(latitude, longitude); };
-                const noBtn = document.createElement('button');
-                noBtn.className = 'px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600';
-                noBtn.textContent = 'No';
-                noBtn.onclick = () => { map.removeLayer(tempLocationMarker); tempLocationMarker = null; };
-                btnContainer.appendChild(yesBtn); btnContainer.appendChild(noBtn);
-                popupContent.appendChild(btnContainer);
-                tempLocationMarker = L.marker([latitude, longitude], { icon: purpleIcon }).addTo(map).bindPopup(popupContent).openPopup();
-                map.setView([latitude, longitude], 16);
-            }, () => showTemporaryMessage("Could not get your location."));
-        });
         
         // --- Mass Upload Logic ---
         async function handleUpload() {
@@ -657,8 +537,8 @@
                     const r = await fetch(url);
                     const d = await r.json();
                     if (d && d.length > 0) {
-                        const { lat, lon } = d[0];
-                        await addMarkerWithGeocode(parseFloat(lat), parseFloat(lon));
+                        const { lat, lon, display_name } = d[0];
+                        addMarker(parseFloat(lat), parseFloat(lon), display_name);
                     } else console.warn(`Could not geocode: ${a[i]}`);
                 } catch (e) {
                     console.error(`Error geocoding ${a[i]}:`, e);
